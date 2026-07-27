@@ -117,8 +117,8 @@ proj                # fuzzy-pick a project you've opened before -> its session
 claude --resume     # reload the conversation (--continue = most recent)
 ```
 
-The picker lists projects most-recently-active first. For an alphabetical list
-instead, set `export PROJ_SORT=alpha` in your shell rc (default is `recent`).
+The picker lists projects most-recently-active first. To list alphabetically,
+add `export PROJ_SORT=alpha` to `~/.zshrc.local` (default is `recent`).
 
 **Everyday commands** (tmux prefix is `Ctrl-b`):
 
@@ -129,11 +129,19 @@ instead, set `export PROJ_SORT=alpha` in your shell rc (default is `recent`).
 | Reattach the most recent | `tmux a` |
 | New window (e.g. reviewer) | `Ctrl-b c` |
 | Switch windows | `Ctrl-b n` / `p`, or click the bottom bar |
-| Quit Claude (not the same as detach) | `/exit` in Claude — a single `Ctrl-C` only cancels |
 
-**Detach** (`Ctrl-b d`) to keep a session alive; don't `exit` the shell, that
-ends the session (and your terminal may close the tab). End a work session with
-"update CLAUDE.md with what we did" so the next resume starts with full context.
+**Detach vs quit:**
+
+- **Detach** (`Ctrl-b d`) whenever you want to come back later, stepping away,
+  switching projects, closing the terminal, shutting down for the day. The
+  session and Claude keep running; reattach with `proj`.
+- **Quit Claude** with **`/exit`** when you're truly done with a conversation.
+  A single `Ctrl-C` does **not** quit, it only cancels the current action.
+- **Don't** `exit` the shell to "close" a session, that ends it (and the tab may
+  close). Detach instead.
+
+End a work session with "update CLAUDE.md with what we did" so the next resume
+starts with full context.
 
 ## Window and display management
 
