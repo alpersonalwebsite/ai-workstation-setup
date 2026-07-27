@@ -117,16 +117,20 @@ more columns you need Rectangle Pro (below) or [Moom](https://manytricks.com/moo
 #### Rectangle Pro: 4 or 5 equal full-height columns
 
 ```bash
-brew install --cask rectangle-pro   # replaces the free Rectangle; remove that first
+brew install --cask rectangle-pro
 ```
 
-Rectangle Pro ($9.99 one-time, 10-day trial) adds custom **Size and Position**
-entries. The key is the **Custom origin** position type, which exposes explicit
-X/Y fields, so you can place every column, not just left/center/right.
+Rectangle Pro ($9.99 one-time, 10-day trial) is a superset of the free
+Rectangle. You can keep both installed, but run only one at a time, otherwise
+they fight over the same hotkeys, so quit or remove the free app once your
+settings are in Pro. It adds custom **Size and Position** entries. The key is
+the **Custom origin** position type, which exposes explicit X/Y fields, so you
+can place every column, not just left/center/right.
 
 Create one entry per column (Settings > Custom Size and Position > `+` > New
-Size/Position > Position: **Custom origin**). Values are fractions of the screen
-when **< 1** (e.g. `0.2` = 20%), pixels when **> 1**, blank to keep current.
+Size/Position > Position: **Custom origin**). Values **≤ 1** are fractions of
+the screen (`0.2` = 20%, `1.0` = 100%); values **> 1** are pixels; blank keeps
+the current value.
 
 Five equal full-height columns, `Y = 0`, `H = 1.0`, `W = 0.2`:
 
@@ -139,9 +143,8 @@ Five equal full-height columns, `Y = 0`, `H = 1.0`, `W = 0.2`:
 | 5 | 0.8 | `Ctrl-Opt-5` |
 
 For four columns, use `W = 0.25` and `X = 0 / 0.25 / 0.5 / 0.75` (bind to
-`Ctrl-Opt-Shift-1..4` so both sets coexist). If `H = 1.0` yields a 1px-tall
-window, that field is reading `1` as pixels; use `0.999`. If a numeric shortcut
-will not record, it collides with another binding, use the `Shift` variant.
+`Ctrl-Opt-Shift-1..4` so both sets coexist). If a numeric shortcut will not
+record, it collides with another binding, use the `Shift` variant.
 
 To place windows, put them on the ultrawide, then press the column's shortcut.
 
