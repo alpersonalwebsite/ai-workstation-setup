@@ -178,10 +178,15 @@ window arrangement:
 2. iTerm2 menu: **Window > Save Window Arrangement**, name it (e.g. `Default`).
 3. iTerm2 **Settings > General > Startup**: set the window restoration policy to
    **Open default window arrangement**.
+4. Add your terminal to **System Settings > General > Login Items** so it
+   actually launches at boot, otherwise the arrangement never runs because the
+   app never opens. (Rectangle Pro has its own "Launch on login" toggle; make
+   sure that's on too.)
 
-**After a reboot:** open iTerm2 (the arrangement restores the windows), then run
-`claude --resume` in each to reload the conversation. The sessions themselves are
-already back via continuum.
+**After a reboot:** iTerm2 launches (Login Items) and its arrangement restores
+the windows, Rectangle is running with your shortcuts, and continuum has
+restored the tmux sessions in the background. The reopened windows come up as
+fresh shells, so run `claude --resume` in each to reload the conversation.
 
 ## Window and display management
 
