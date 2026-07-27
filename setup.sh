@@ -33,9 +33,11 @@ for arg in "$@"; do
     --apps)       INSTALL_APPS=true ;;
     --assume-yes|-y) ASSUME_YES=true ;;
     # Print the header block, stopping at the first non-comment line, so this
-    # does not go stale when the header grows.
-    -h|--help)    awk 'NR>1 && /^#/ {sub(/^# ?/, ""); print; next} NR>1 {exit}' \
-                      "${BASH_SOURCE[0]}"; exit 0 ;;
+    # does not go stale when the header grows. `started` suppresses the leading
+    # blank produced by the bare `#` on line 2.
+    -h|--help)    awk 'NR>1 && /^#/ {sub(/^# ?/, "");
+                         if (!started && $0 == "") next; started = 1; print; next}
+                       NR>1 {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
     *)            echo "Unknown option: $arg (try --help)" >&2; exit 2 ;;
   esac
 done
@@ -116,37 +118,45 @@ EOF
   fi
   log "Installing Homebrew"
   /bin/bash -c "$(curl -fsSL "$BREW_INSTALLER_URL")"
-  # Add brew to PATH for this script run. Test the path before eval'ing:
-  # `eval "$(/missing/brew shellenv)"` exits 0 with empty output, so an
-  # `||` fallback after it would be dead code.
-  if [[ -x /opt/homebrew/bin/brew ]]; then       # Apple Silicon
-    BREW_BIN=/opt/homebrew/bin/brew
-  elif [[ -x /usr/local/bin/brew ]]; then        # Intel
-    BREW_BIN=/usr/local/bin/brew
-  else
-    echo "Homebrew installed but not found at the expected prefix." >&2
-    echo "Open a new terminal and re-run this script." >&2
-    exit 1
-  fi
-  eval "$("$BREW_BIN" shellenv)"
-
-  # The eval above only affects this process. Without persisting it, a brand
-  # new account gets Homebrew installed but every future shell still cannot
-  # find brew, tmux, or fzf. The Homebrew installer prints this as a manual
-  # "next step"; do it for the user instead, idempotently.
-  ZPROFILE="$HOME/.zprofile"
-  [[ -e "$ZPROFILE" ]] || touch "$ZPROFILE"
-  if ! grep -qE '^[[:space:]]*eval "\$\(.*brew shellenv\)"' "$ZPROFILE"; then
-    log "Adding brew shellenv to ~/.zprofile so future shells find Homebrew"
-    # SC2016: the $(...) is meant to land in ~/.zprofile literally and be
-    # evaluated by each new shell, not expanded here.
-    # shellcheck disable=SC2016
-    printf '\n# Homebrew\neval "$(%s shellenv)"\n' "$BREW_BIN" >> "$ZPROFILE"
-  else
-    log "brew shellenv already in ~/.zprofile"
-  fi
 else
   log "Homebrew already installed: $(brew --version | head -1)"
+fi
+
+# Locate brew and make it usable, both now and in future shells. This runs on
+# BOTH paths, not just after a fresh install: brew can be on PATH for this
+# process (inherited from the parent shell, or exported by hand) while nothing
+# persists it, in which case new shells would still lose it.
+#
+# Test the path before eval'ing: `eval "$(/missing/brew shellenv)"` exits 0 with
+# empty output, so an `||` fallback after it would be dead code.
+if [[ -x /opt/homebrew/bin/brew ]]; then         # Apple Silicon
+  BREW_BIN=/opt/homebrew/bin/brew
+elif [[ -x /usr/local/bin/brew ]]; then          # Intel
+  BREW_BIN=/usr/local/bin/brew
+elif command -v brew >/dev/null 2>&1; then       # non-standard prefix, respect it
+  BREW_BIN="$(command -v brew)"
+else
+  echo "Homebrew is not at any known prefix." >&2
+  echo "Open a new terminal and re-run this script." >&2
+  exit 1
+fi
+eval "$("$BREW_BIN" shellenv)"
+
+# The eval above only affects this process. Without persisting it, a brand new
+# account gets Homebrew installed but every future shell still cannot find brew,
+# tmux, or fzf. The Homebrew installer prints this as a manual "next step"; do
+# it for the user instead, idempotently. ~/.zshrc is checked too so we do not
+# add a redundant second line for people who already wired it up there.
+ZPROFILE="$HOME/.zprofile"
+if grep -qsE '^[[:space:]]*eval "\$\(.*brew shellenv\)"' "$ZPROFILE" "$HOME/.zshrc"; then
+  log "brew shellenv already persisted in a shell startup file"
+else
+  [[ -e "$ZPROFILE" ]] || touch "$ZPROFILE"
+  log "Adding brew shellenv to ~/.zprofile so future shells find Homebrew"
+  # SC2016: the $(...) is meant to land in ~/.zprofile literally and be
+  # evaluated by each new shell, not expanded here.
+  # shellcheck disable=SC2016
+  printf '\n# Homebrew\neval "$(%s shellenv)"\n' "$BREW_BIN" >> "$ZPROFILE"
 fi
 
 # --- 2. tmux ----------------------------------------------------------------
