@@ -152,6 +152,35 @@ drive the columns by keyboard only, or set Rectangle Pro to snap on drag only
 while a modifier is held (Settings > Snapping). The keyboard shortcuts work
 regardless.
 
+#### Rows and grids
+
+Rows work exactly like columns, you just vary `Y`/`H` instead of `X`/`W`. For a
+quick two-stack, the built-in halves are enough: `Ctrl-Opt-Up` (top half) and
+`Ctrl-Opt-Down` (bottom half). For anything else, use Custom Size and Position.
+
+Four equal full-height-width rows, `X = 0`, `W = 1`, `H = 0.25`:
+
+| Row | Y |
+|---|---|
+| 1 | 0 |
+| 2 | 0.25 |
+| 3 | 0.5 |
+| 4 | 0.75 |
+
+Because `X`, `Y`, `W`, `H` are independent, any grid cell is expressible, a 2x2
+quadrant is `W = 0.5, H = 0.5` at the four `X`/`Y` corners; a wide log pane under
+five columns is a full-width `Y = 0.5, H = 0.5` row plus the five-column set
+above it. Each cell is its own entry with its own shortcut.
+
+**Targeting a specific display.** A custom entry can either follow the focused
+window's current display, or be pinned to one monitor via the **Destination
+display** field. Pinning is handy for portrait side monitors: e.g. two entries
+"Row 2" and "Row 3" pinned to the left monitor place two stacked terminals there
+with one keystroke each, no need to move the window over first. Duplicate the set
+per monitor if you want the same rows on each. The trade-off: a pinned entry is
+tied to that display's identity, so unplugging or rearranging monitors can change
+the ID and the entry may need recreating.
+
 ### [MonitorControl](https://github.com/MonitorControl/MonitorControl)
 
 ```bash
