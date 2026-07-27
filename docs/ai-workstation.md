@@ -109,8 +109,48 @@ brew install --cask rectangle
   System Settings > Desktop & Dock > Tiled windows).
 
 On an ultrawide, the free version's thirds (`Ctrl-Opt-D` / `F` / `G`) give three
-full-height columns. Rectangle Pro or [Moom](https://manytricks.com/moom/) can
-save a custom 4- or 5-column grid if you want more.
+full-height columns. That is the ceiling for free Rectangle: its built-in
+column splits stop at thirds, and its anchor-based custom sizes (center, edges,
+corners) cannot place the in-between columns of a 4- or 5-column layout. For
+more columns you need Rectangle Pro (below) or [Moom](https://manytricks.com/moom/).
+
+#### Rectangle Pro: 4 or 5 equal full-height columns
+
+```bash
+brew install --cask rectangle-pro   # replaces the free Rectangle; remove that first
+```
+
+Rectangle Pro ($9.99 one-time, 10-day trial) adds custom **Size and Position**
+entries. The key is the **Custom origin** position type, which exposes explicit
+X/Y fields, so you can place every column, not just left/center/right.
+
+Create one entry per column (Settings > Custom Size and Position > `+` > New
+Size/Position > Position: **Custom origin**). Values are fractions of the screen
+when **< 1** (e.g. `0.2` = 20%), pixels when **> 1**, blank to keep current.
+
+Five equal full-height columns, `Y = 0`, `H = 1.0`, `W = 0.2`:
+
+| Column | X | Shortcut |
+|---|---|---|
+| 1 | 0   | `Ctrl-Opt-1` |
+| 2 | 0.2 | `Ctrl-Opt-2` |
+| 3 | 0.4 | `Ctrl-Opt-3` |
+| 4 | 0.6 | `Ctrl-Opt-4` |
+| 5 | 0.8 | `Ctrl-Opt-5` |
+
+For four columns, use `W = 0.25` and `X = 0 / 0.25 / 0.5 / 0.75` (bind to
+`Ctrl-Opt-Shift-1..4` so both sets coexist). If `H = 1.0` yields a 1px-tall
+window, that field is reading `1` as pixels; use `0.999`. If a numeric shortcut
+will not record, it collides with another binding, use the `Shift` variant.
+
+To place windows, put them on the ultrawide, then press the column's shortcut.
+
+**On "use as a snap target":** enabling it on a column also turns that column
+into a drag zone, so dragging *any* window (a browser, say) will try to snap it
+into a 20%-wide strip. If that is unwanted, either leave snap targets off and
+drive the columns by keyboard only, or set Rectangle Pro to snap on drag only
+while a modifier is held (Settings > Snapping). The keyboard shortcuts work
+regardless.
 
 ### [MonitorControl](https://github.com/MonitorControl/MonitorControl)
 
