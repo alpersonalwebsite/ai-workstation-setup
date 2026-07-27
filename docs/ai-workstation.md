@@ -150,6 +150,36 @@ Mnemonic: **`/exit` closes Claude; `exit` closes the session.**
 End a work session with "update CLAUDE.md with what we did" so the next resume
 starts with full context.
 
+### Surviving a restart
+
+A reboot stops the tmux server, so nothing is literally "live" across it, but
+almost everything is restored:
+
+| Thing | After a reboot |
+|---|---|
+| Claude conversations | Saved to disk; reload with `claude --resume` |
+| tmux sessions (windows, panes, dirs) | Auto-restored by continuum |
+| Rectangle column/row shortcuts | Kept (they live in Rectangle's prefs) |
+| Which window sat in which column | **Not** restored on its own, re-snap, or use an iTerm2 arrangement |
+
+**Auto-start tmux.** `@continuum-boot 'on'` (in `config/tmux.conf`) installs a
+login item so tmux starts at boot and continuum restores your saved sessions
+without you launching it. It arms itself the first time tmux runs after the
+setting is added, so start tmux once (`proj`) to install the login item.
+
+**Restore window positions.** Rectangle keeps your shortcuts but does not
+re-place windows. To bring your columns/rows back automatically, use an iTerm2
+window arrangement:
+
+1. Arrange your windows the way you want.
+2. iTerm2 menu: **Window > Save Window Arrangement**, name it (e.g. `Default`).
+3. iTerm2 **Settings > General > Startup**: set the window restoration policy to
+   **Open default window arrangement**.
+
+**After a reboot:** open iTerm2 (the arrangement restores the windows), then run
+`claude --resume` in each to reload the conversation. The sessions themselves are
+already back via continuum.
+
 ## Window and display management
 
 ### [Rectangle](https://rectangleapp.com/)
