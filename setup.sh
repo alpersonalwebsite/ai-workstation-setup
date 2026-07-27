@@ -78,7 +78,10 @@ install_config() {
     return 0
   fi
   if [[ -e "$dest" ]]; then
-    backup="${dest}.backup.$(date +%s 2>/dev/null || echo old)"
+    # mktemp rather than a timestamp: `date +%s` has one-second resolution, so
+    # two differing runs in the same second would reuse the path and the second
+    # backup would overwrite the first.
+    backup="$(mktemp "${dest}.backup.XXXXXX")"
     log "Backing up existing $name -> $backup"
     cp "$dest" "$backup"
   fi
@@ -117,13 +120,30 @@ EOF
   # `eval "$(/missing/brew shellenv)"` exits 0 with empty output, so an
   # `||` fallback after it would be dead code.
   if [[ -x /opt/homebrew/bin/brew ]]; then       # Apple Silicon
-    eval "$(/opt/homebrew/bin/brew shellenv)"
+    BREW_BIN=/opt/homebrew/bin/brew
   elif [[ -x /usr/local/bin/brew ]]; then        # Intel
-    eval "$(/usr/local/bin/brew shellenv)"
+    BREW_BIN=/usr/local/bin/brew
   else
     echo "Homebrew installed but not found at the expected prefix." >&2
     echo "Open a new terminal and re-run this script." >&2
     exit 1
+  fi
+  eval "$("$BREW_BIN" shellenv)"
+
+  # The eval above only affects this process. Without persisting it, a brand
+  # new account gets Homebrew installed but every future shell still cannot
+  # find brew, tmux, or fzf. The Homebrew installer prints this as a manual
+  # "next step"; do it for the user instead, idempotently.
+  ZPROFILE="$HOME/.zprofile"
+  [[ -e "$ZPROFILE" ]] || touch "$ZPROFILE"
+  if ! grep -qE '^[[:space:]]*eval "\$\(.*brew shellenv\)"' "$ZPROFILE"; then
+    log "Adding brew shellenv to ~/.zprofile so future shells find Homebrew"
+    # SC2016: the $(...) is meant to land in ~/.zprofile literally and be
+    # evaluated by each new shell, not expanded here.
+    # shellcheck disable=SC2016
+    printf '\n# Homebrew\neval "$(%s shellenv)"\n' "$BREW_BIN" >> "$ZPROFILE"
+  else
+    log "brew shellenv already in ~/.zprofile"
   fi
 else
   log "Homebrew already installed: $(brew --version | head -1)"
@@ -140,23 +160,60 @@ fi
 # --- 3. TPM (tmux plugin manager) ------------------------------------------
 # Pinned to a tag and verified against a known commit, rather than tracking the
 # default branch, so a compromised or simply changed upstream cannot silently
-# alter what runs on your machine.
-if [[ ! -d "$HOME/.tmux/plugins/tpm" ]]; then
-  log "Cloning TPM $TPM_VERSION"
+# alter what runs on your machine. Note `git clone` creates the intermediate
+# ~/.tmux/plugins directories itself, so no mkdir -p is needed.
+TPM_DIR="$HOME/.tmux/plugins/tpm"
+
+clone_tpm_pinned() {
   git clone --branch "$TPM_VERSION" --depth 1 \
-      https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
-  ACTUAL_COMMIT="$(git -C "$HOME/.tmux/plugins/tpm" rev-parse HEAD)"
-  if [[ "$ACTUAL_COMMIT" != "$TPM_COMMIT" ]]; then
+      https://github.com/tmux-plugins/tpm "$TPM_DIR"
+  local actual
+  actual="$(git -C "$TPM_DIR" rev-parse HEAD)"
+  if [[ "$actual" != "$TPM_COMMIT" ]]; then
     echo "TPM commit mismatch for tag $TPM_VERSION." >&2
     echo "  expected: $TPM_COMMIT" >&2
-    echo "  actual:   $ACTUAL_COMMIT" >&2
+    echo "  actual:   $actual" >&2
     echo "The tag may have been moved upstream. Refusing to continue." >&2
-    rm -rf "$HOME/.tmux/plugins/tpm"
+    rm -rf "$TPM_DIR"
     exit 1
   fi
   log "TPM pinned at $TPM_VERSION ($TPM_COMMIT)"
+}
+
+if [[ ! -d "$TPM_DIR" ]]; then
+  log "Cloning TPM $TPM_VERSION"
+  clone_tpm_pinned
 else
-  log "TPM already present at $(git -C "$HOME/.tmux/plugins/tpm" rev-parse --short HEAD 2>/dev/null || echo 'unknown revision')"
+  # An existing checkout must be verified too. Step 5 executes TPM's code, so
+  # accepting whatever happens to be on disk would make the pin advisory only:
+  # an old, drifted, or locally modified checkout would run unchecked.
+  EXISTING_COMMIT="$(git -C "$TPM_DIR" rev-parse HEAD 2>/dev/null || echo none)"
+  EXISTING_DIRTY="$(git -C "$TPM_DIR" status --porcelain 2>/dev/null || echo unknown)"
+  if [[ "$EXISTING_COMMIT" == "$TPM_COMMIT" && -z "$EXISTING_DIRTY" ]]; then
+    log "TPM already present and matches the pin ($TPM_VERSION)"
+  else
+    log "Existing TPM checkout does NOT match the pin"
+    cat <<EOF
+
+  Found: $TPM_DIR
+    commit:      $EXISTING_COMMIT
+    working tree: $([[ -z "$EXISTING_DIRTY" ]] && echo clean || echo "locally modified")
+  Expected commit: $TPM_COMMIT ($TPM_VERSION)
+
+  This script runs TPM's code in the next step, so it will not execute an
+  unverified checkout. Replacing it re-clones TPM at the pinned tag. Your
+  installed plugins under ~/.tmux/plugins/ are not touched.
+
+EOF
+    if confirm "  Replace it with the pinned version?"; then
+      rm -rf "$TPM_DIR"
+      clone_tpm_pinned
+    else
+      echo "Leaving TPM as-is and stopping, since it cannot be verified." >&2
+      echo "Re-run and accept, or remove $TPM_DIR yourself." >&2
+      exit 1
+    fi
+  fi
 fi
 
 # --- 4. tmux config ---------------------------------------------------------
@@ -193,7 +250,10 @@ if [[ ! -e "$ZSHRC" ]]; then
   log "No ~/.zshrc found, creating one"
   touch "$ZSHRC"
 fi
-if ! grep -q 'claude-proj.zsh' "$ZSHRC"; then
+# Match an ACTIVE source directive, not any mention of the filename. A bare
+# `grep -q 'claude-proj.zsh'` also matches a commented-out or stale reference,
+# which would make us skip the append and leave proj/initclaude unavailable.
+if ! grep -qE '^[^#]*\b(source|\.)[[:space:]]+.*claude-proj\.zsh' "$ZSHRC"; then
   log "Sourcing claude-proj.zsh from ~/.zshrc"
   printf '\n# Claude Code project switcher (proj) + CLAUDE.md scaffold (initclaude)\n[[ -f ~/.claude-proj.zsh ]] && source ~/.claude-proj.zsh\n' >> "$ZSHRC"
 else

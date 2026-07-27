@@ -26,8 +26,10 @@ This is a personal collection rather than a framework. Take what is useful.
 ```bash
 git clone https://github.com/alpersonalwebsite/ai-workstation-setup.git
 cd ai-workstation-setup
+# Run ONE of these, not both:
 ./setup.sh            # tmux + plugins + config + fzf + proj/initclaude
-./setup.sh --apps     # the above, plus Rectangle, iTerm2, MonitorControl
+# or
+./setup.sh --apps     # all of the above, plus Rectangle, iTerm2, MonitorControl
 ```
 
 The script is safe to re-run: every step checks before acting, and re-running
@@ -64,9 +66,11 @@ Notes on the two unpinned cases:
   [brew.sh](https://brew.sh) first.
 - **tmux plugins** are fetched unpinned by TPM, which has no lockfile mechanism.
   Pinning TPM does not pin what TPM pulls. All four plugins come from the
-  [tmux-plugins](https://github.com/tmux-plugins) org and run locally with no
-  telemetry, but you are trusting their default branches at install time. To
-  pin them, clone each plugin yourself at a chosen tag into
+  [tmux-plugins](https://github.com/tmux-plugins) org and, as reviewed at the
+  time of writing, run locally and make no network calls of their own. Treat
+  that as an observation about the revisions I looked at, not a standing
+  guarantee: because the branches are mutable, what you install may not be what
+  I reviewed. To pin them, clone each plugin yourself at a chosen tag into
   `~/.tmux/plugins/` and drop the `set -g @plugin` lines from `tmux.conf`.
 
 To bump the TPM pin, change `TPM_VERSION` and `TPM_COMMIT` in `setup.sh`

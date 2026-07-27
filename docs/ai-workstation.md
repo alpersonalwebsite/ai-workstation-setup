@@ -123,10 +123,20 @@ brew install --cask monitorcontrol
   own; this uses DDC/CI to do it.
 - **Replaces/changes:** Replaces reaching for the monitor's physical joystick.
 
-Grant it System Settings > Privacy & Security > Accessibility. It works over a
-native USB-C or DisplayPort connection. It does not work through a DisplayLink
-dock, since DDC does not pass through, so monitors on a dock still need their
-physical buttons.
+Grant it System Settings > Privacy & Security > Accessibility.
+
+How well it works depends on the connection, and it is worth treating as
+something to test rather than assume:
+
+- **DisplayPort, or USB-C in DP Alt Mode:** usually works, but not always. DDC
+  support varies by monitor, by cable, and sometimes by which input you use on
+  the same monitor. If brightness keys do nothing, try the other input before
+  concluding the app is broken.
+- **Through a DisplayLink dock:** does not work. DDC does not pass through, so
+  monitors on a dock still need their physical buttons.
+
+If it does not work for a given display, that is usually the monitor or the
+link, not MonitorControl.
 
 ### [displayplacer](https://github.com/jakehilborn/displayplacer)
 
@@ -184,8 +194,10 @@ different branches.
 
 ## Security notes
 
-- tmux and its plugins run locally with no telemetry. TPM only uses the network
-  to download plugin code when you install or update.
+- tmux runs locally. TPM only uses the network to download plugin code when you
+  install or update. The four plugins made no network calls of their own in the
+  revisions I reviewed, but they are fetched from mutable branches, so that is
+  an observation rather than a guarantee about what you will get.
 - TPM itself is pinned to a tag in `setup.sh` and its commit is verified after
   cloning, so a moved tag aborts the install. The plugins TPM then pulls are
   **not** pinned, since TPM has no lockfile. See
