@@ -109,8 +109,80 @@ brew install --cask rectangle
   System Settings > Desktop & Dock > Tiled windows).
 
 On an ultrawide, the free version's thirds (`Ctrl-Opt-D` / `F` / `G`) give three
-full-height columns. Rectangle Pro or [Moom](https://manytricks.com/moom/) can
-save a custom 4- or 5-column grid if you want more.
+full-height columns. That is the ceiling for free Rectangle: its built-in
+column splits stop at thirds, and its anchor-based custom sizes (center, edges,
+corners) cannot place the in-between columns of a 4- or 5-column layout. For
+more columns you need Rectangle Pro (below) or [Moom](https://manytricks.com/moom/).
+
+#### Rectangle Pro: 4 or 5 equal full-height columns
+
+```bash
+brew install --cask rectangle-pro
+```
+
+Rectangle Pro ($9.99 one-time, 10-day trial) is a superset of the free
+Rectangle. You can keep both installed, but run only one at a time, otherwise
+they fight over the same hotkeys, so quit or remove the free app once your
+settings are in Pro. It adds custom **Size and Position** entries. The key is
+the **Custom origin** position type, which exposes explicit X/Y fields, so you
+can place every column, not just left/center/right.
+
+Create one entry per column (Settings > Custom Size and Position > `+` > New
+Size/Position > Position: **Custom origin**). Values **≤ 1** are fractions of
+the screen (`0.2` = 20%, `1.0` = 100%); values **> 1** are pixels; blank keeps
+the current value.
+
+Five equal full-height columns, `Y = 0`, `H = 1.0`, `W = 0.2`:
+
+| Column | X | Shortcut |
+|---|---|---|
+| 1 | 0   | `Ctrl-Opt-1` |
+| 2 | 0.2 | `Ctrl-Opt-2` |
+| 3 | 0.4 | `Ctrl-Opt-3` |
+| 4 | 0.6 | `Ctrl-Opt-4` |
+| 5 | 0.8 | `Ctrl-Opt-5` |
+
+For four columns, use `W = 0.25` and `X = 0 / 0.25 / 0.5 / 0.75` (bind to
+`Ctrl-Opt-Shift-1..4` so both sets coexist). If a numeric shortcut will not
+record, it collides with another binding, use the `Shift` variant.
+
+To place windows, put them on the ultrawide, then press the column's shortcut.
+
+**On "use as a snap target":** enabling it on a column also turns that column
+into a drag zone, so dragging *any* window (a browser, say) will try to snap it
+into a 20%-wide strip. If that is unwanted, either leave snap targets off and
+drive the columns by keyboard only, or set Rectangle Pro to snap on drag only
+while a modifier is held (Settings > Snapping). The keyboard shortcuts work
+regardless.
+
+#### Rows and grids
+
+Rows work exactly like columns, you just vary `Y`/`H` instead of `X`/`W`. For a
+quick two-stack, the built-in halves are enough: `Ctrl-Opt-Up` (top half) and
+`Ctrl-Opt-Down` (bottom half). For anything else, use Custom Size and Position.
+
+Four equal full-height-width rows, `X = 0`, `W = 1`, `H = 0.25`:
+
+| Row | Y |
+|---|---|
+| 1 | 0 |
+| 2 | 0.25 |
+| 3 | 0.5 |
+| 4 | 0.75 |
+
+Because `X`, `Y`, `W`, `H` are independent, any grid cell is expressible, a 2x2
+quadrant is `W = 0.5, H = 0.5` at the four `X`/`Y` corners; a wide log pane under
+five columns is a full-width `Y = 0.5, H = 0.5` row plus the five-column set
+above it. Each cell is its own entry with its own shortcut.
+
+**Targeting a specific display.** A custom entry can either follow the focused
+window's current display, or be pinned to one monitor via the **Destination
+display** field. Pinning is handy for portrait side monitors: e.g. two entries
+"Row 2" and "Row 3" pinned to the left monitor place two stacked terminals there
+with one keystroke each, no need to move the window over first. Duplicate the set
+per monitor if you want the same rows on each. The trade-off: a pinned entry is
+tied to that display's identity, so unplugging or rearranging monitors can change
+the ID and the entry may need recreating.
 
 ### [MonitorControl](https://github.com/MonitorControl/MonitorControl)
 
