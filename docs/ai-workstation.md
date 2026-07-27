@@ -186,6 +186,10 @@ different branches.
 
 - tmux and its plugins run locally with no telemetry. TPM only uses the network
   to download plugin code when you install or update.
+- TPM itself is pinned to a tag in `setup.sh` and its commit is verified after
+  cloning, so a moved tag aborts the install. The plugins TPM then pulls are
+  **not** pinned, since TPM has no lockfile. See
+  [What this fetches](../README.md#what-this-fetches).
 - tmux-resurrect can persist pane scrollback to
   `~/.local/share/tmux/resurrect/` in plaintext, which means whatever your
   terminal printed, including anything another tool echoed. This config ships

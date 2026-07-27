@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shell:
+    name: Shell lint and syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck and zsh
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck zsh
+
+      - name: shellcheck setup.sh
+        run: shellcheck --severity=style setup.sh
+
+      - name: bash -n (syntax)
+        run: bash -n setup.sh
+
+      - name: zsh -n (syntax)
+        run: zsh -n config/claude-proj.zsh
+
+      # The shipped default must stay 'off'. A public repo should not turn
+      # every cloner's terminal scrollback into a plaintext file on disk.
+      - name: Assert pane-capture ships disabled
+        run: |
+          if ! grep -qx "set -g @resurrect-capture-pane-contents 'off'" config/tmux.conf; then
+            echo "::error file=config/tmux.conf::pane-capture must ship set to 'off'"
+            exit 1
+          fi
+          if grep -qE "^\s*set -g @resurrect-capture-pane-contents 'on'" config/tmux.conf; then
+            echo "::error file=config/tmux.conf::the 'on' variant must stay commented out"
+            exit 1
+          fi
+
+      # Catches a bumped TPM_VERSION whose TPM_COMMIT was not updated with it.
+      - name: Verify the TPM pin resolves to the recorded commit
+        run: |
+          version="$(grep -oE 'TPM_VERSION="[^"]+"' setup.sh | cut -d'"' -f2)"
+          expected="$(grep -oE 'TPM_COMMIT="[^"]+"' setup.sh | cut -d'"' -f2)"
+          # These are annotated tags, so resolve the peeled ref (^{}) to get the
+          # commit. The bare ref returns the tag object, which never equals what
+          # `git rev-parse HEAD` reports after a clone.
+          actual="$(git ls-remote https://github.com/tmux-plugins/tpm "refs/tags/$version^{}" | cut -f1)"
+          if [ -z "$actual" ]; then
+            actual="$(git ls-remote https://github.com/tmux-plugins/tpm "refs/tags/$version" | cut -f1)"
+          fi
+          echo "tag=$version expected=$expected actual=$actual"
+          if [ -z "$actual" ]; then
+            echo "::error::tag $version not found upstream"
+            exit 1
+          fi
+          if [ "$actual" != "$expected" ]; then
+            echo "::error file=setup.sh::TPM_COMMIT does not match tag $version upstream (moved tag?)"
+            exit 1
+          fi
+
+  tmux-config:
+    name: tmux config parses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tmux
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tmux
+      - name: Parse config on an isolated socket
+        run: |
+          # TPM is not installed here, so the run-shell line at the bottom is
+          # expected to fail. Everything else must parse cleanly.
+          out="$(tmux -L ci -f config/tmux.conf start-server 2>&1 || true)"
+          echo "$out"
+          if echo "$out" | grep -v 'tpm' | grep -qi 'error\|unknown\|invalid'; then
+            echo "::error file=config/tmux.conf::config failed to parse"
+            exit 1
+          fi
+          tmux -L ci kill-server 2>/dev/null || true
+
+  links:
+    name: Docs links resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check relative markdown links
+        run: |
+          fail=0
+          while IFS= read -r md; do
+            dir="$(dirname "$md")"
+            while IFS= read -r link; do
+              [ -n "$link" ] || continue
+              case "$link" in http*|\#*) continue ;; esac
+              # Strip any #anchor before testing the path on disk.
+              path="${link%%#*}"
+              [ -n "$path" ] || continue
+              if [ ! -e "$dir/$path" ]; then
+                echo "::error file=$md::dead relative link: $link"
+                fail=1
+              fi
+            done <<EOF
+          $(grep -o '](\.\{0,2\}[^)]*)' "$md" | sed 's/^](//; s/)$//')
+          EOF
+          done <<EOF
+          $(find . -name '*.md' -not -path './.git/*')
+          EOF
+          exit $fail
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
