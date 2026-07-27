@@ -41,6 +41,7 @@ _claude_projects() {
 proj() {
   emulate -L zsh
   local dir sess hash
+  (( $# <= 1 )) || { print -u2 "usage: proj [directory]"; return 2; }
   if [[ -n "$1" ]]; then
     dir=${1:A}                    # absolute path; handles `proj .` and new folders
     [[ -d "$dir" ]] || { print -u2 "proj: no such directory: $1"; return 1; }
