@@ -14,7 +14,7 @@ jobs:
     name: Shell lint and syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install shellcheck and zsh
         run: |
@@ -69,7 +69,7 @@ jobs:
     name: tmux config parses
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install tmux
         run: |
           sudo apt-get update
@@ -90,7 +90,7 @@ jobs:
     name: Docs links resolve
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check relative markdown links
         run: |
           fail=0
@@ -118,7 +118,7 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: gitleaks
