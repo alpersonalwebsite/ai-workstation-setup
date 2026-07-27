@@ -94,6 +94,35 @@ Both live in [`../config/claude-proj.zsh`](../config/claude-proj.zsh), which
 - **Replaces/changes:** Nothing new, it is just a template. The value is that
   the template asks the right questions.
 
+### Project workflow
+
+`proj` only lists projects Claude has already opened, so it is for *resuming*,
+not *creating*.
+
+**New project** (bootstrap it once):
+
+```bash
+mkdir my-project && cd my-project
+initclaude                 # optional: scaffold CLAUDE.md
+tmux new -s my-project     # persistent session, named after the folder
+claude                     # first run registers it; now it shows up in proj
+```
+
+**Resume a project** (anything Claude has opened before):
+
+```bash
+proj                       # fuzzy-pick -> its folder + a tmux session
+claude --resume            # reload the conversation (--continue = most recent)
+```
+
+End a session with "update CLAUDE.md with what we did" so the next resume starts
+with full context.
+
+> Note: `proj` names its tmux session with a hash suffix, so it will not
+> reattach a session you hand-named with `tmux new -s`; use
+> `tmux attach -t <name>` for those. Pick one convention to avoid duplicate
+> sessions for the same project.
+
 ## Window and display management
 
 ### [Rectangle](https://rectangleapp.com/)
