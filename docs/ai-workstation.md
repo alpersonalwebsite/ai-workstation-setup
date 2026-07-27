@@ -94,6 +94,95 @@ Both live in [`../config/claude-proj.zsh`](../config/claude-proj.zsh), which
 - **Replaces/changes:** Nothing new, it is just a template. The value is that
   the template asks the right questions.
 
+### Project workflow
+
+One command, `proj`, handles both new and existing projects. Its tmux session
+name is derived from the folder path, so it always reattaches the *same* session
+instead of spawning duplicates, no hand-naming, no `tmux attach -t <name>`.
+
+**New project:**
+
+```bash
+mkdir my-project && cd my-project
+initclaude          # optional: scaffold CLAUDE.md (project memory)
+proj .              # create/attach this folder's tmux session
+claude              # start Claude inside it — now persistent
+```
+
+**Resume a project:**
+
+```bash
+proj                # fuzzy-pick a project you've opened before -> its session
+                    # (or `proj .` if you're already in the folder)
+claude --resume     # reload the conversation (--continue = most recent)
+```
+
+The picker lists projects most-recently-active first. To list alphabetically,
+add `export PROJ_SORT=alpha` to `~/.zshrc.local` (default is `recent`).
+
+**Everyday commands** (tmux prefix is `Ctrl-b`):
+
+| Do this | Keys / command |
+|---|---|
+| Detach (leave it running) | `Ctrl-b` then `d` |
+| List running sessions | `tmux ls` |
+| Reattach the most recent | `tmux a` |
+| New window (e.g. reviewer) | `Ctrl-b c` |
+| Switch windows | `Ctrl-b n` / `p`, or click the bottom bar |
+
+**Detach vs quit, and what ends a session:**
+
+A tmux session runs on its own; detaching only unhooks it from the window. So
+closing or reusing a window never loses your work, only *ending* the session
+does.
+
+| Action | Effect |
+|---|---|
+| `/exit` in Claude | Closes Claude; you stay at the tmux shell (session alive) |
+| `Ctrl-b d` (detach) | Unhooks the window; session keeps running (reattach with `proj`) |
+| Close the iTerm2 tab/window | Session keeps running |
+| `exit` or `Ctrl-D` at the tmux shell | **Ends** the window → the last one ends the session |
+| `tmux kill-session` | **Ends** the session |
+
+A single `Ctrl-C` in Claude only cancels the current action, it does not quit.
+Mnemonic: **`/exit` closes Claude; `exit` closes the session.**
+
+End a work session with "update CLAUDE.md with what we did" so the next resume
+starts with full context.
+
+### Surviving a restart
+
+A reboot stops the tmux server, so nothing is literally "live" across it, but
+almost everything is restored:
+
+| Thing | After a reboot |
+|---|---|
+| Claude conversations | Saved to disk; reload with `claude --resume` |
+| tmux sessions (windows, panes, dirs) | Auto-restored by continuum |
+| Rectangle column/row shortcuts | Kept (they live in Rectangle's prefs) |
+| Which window sat in which column | **Not** restored on its own, re-snap, or use an iTerm2 arrangement |
+
+**Auto-start tmux.** `@continuum-boot 'on'` (in `config/tmux.conf`) installs a
+login item so tmux starts at boot and continuum restores your saved sessions
+without you launching it. It arms itself the first time tmux runs after the
+setting is added, so start tmux once (`proj`) to install the login item
+(`~/Library/LaunchAgents/Tmux.Start.plist`). macOS lists it under **System
+Settings > General > Login Items**, leave it enabled; it takes effect at the
+next login, not the current session.
+
+**Restore window positions.** Rectangle keeps your shortcuts but does not
+re-place windows. To bring your columns/rows back automatically, use an iTerm2
+window arrangement:
+
+1. Arrange your windows the way you want.
+2. iTerm2 menu: **Window > Save Window Arrangement**, name it (e.g. `Default`).
+3. iTerm2 **Settings > General > Startup**: set the window restoration policy to
+   **Open default window arrangement**.
+
+**After a reboot:** open iTerm2 (the arrangement restores the windows), then run
+`claude --resume` in each to reload the conversation. The sessions themselves are
+already back via continuum.
+
 ## Window and display management
 
 ### [Rectangle](https://rectangleapp.com/)
@@ -183,6 +272,24 @@ with one keystroke each, no need to move the window over first. Duplicate the se
 per monitor if you want the same rows on each. The trade-off: a pinned entry is
 tied to that display's identity, so unplugging or rearranging monitors can change
 the ID and the entry may need recreating.
+
+#### Example: a full multi-monitor keymap
+
+One worked layout, an ultrawide flanked by two portrait monitors, with every
+target as its own custom entry (assign the shortcuts on the entries in **Custom
+Size and Position**, and leave the built-in size actions unbound so nothing is
+double-bound):
+
+| Target | Shortcuts |
+|---|---|
+| Ultrawide, 5 columns (left→right) | `Ctrl-Opt-1 … 5` |
+| Left monitor, 4 rows (top→bottom) | `Ctrl-Opt-Q / A / Z / X` |
+| Right monitor, 4 rows (top→bottom) | `Ctrl-Opt-P / ; / . / /` |
+
+Mnemonic: left-hand keys drive the left monitor, right-hand keys the right, and
+going down the keyboard goes down the screen. Columns and side rows are all
+display-pinned, so one keystroke both moves the window to the right monitor and
+sizes it.
 
 ### [MonitorControl](https://github.com/MonitorControl/MonitorControl)
 
