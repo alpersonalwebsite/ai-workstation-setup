@@ -132,11 +132,15 @@ add `export PROJ_SORT=alpha` to `~/.zshrc.local` (default is `recent`).
 
 **Detach vs quit:**
 
-- **Detach** (`Ctrl-b d`) whenever you want to come back later, stepping away,
-  switching projects, closing the terminal, shutting down for the day. The
-  session and Claude keep running; reattach with `proj`.
-- **Quit Claude** with **`/exit`** when you're truly done with a conversation.
-  A single `Ctrl-C` does **not** quit, it only cancels the current action.
+The session keeps running no matter what, tmux doesn't stop when you look away.
+Detaching just unhooks it from your terminal window so you can close or reuse
+that window without killing the session.
+
+- **Detach** (`Ctrl-b d`) when you're about to **close the tab / quit iTerm2**, or
+  want to reuse the window for something else. Reattach later with `proj`. Just
+  leaving the window open? No need to detach.
+- **Quit Claude** with **`/exit`** when you're done with a conversation. A single
+  `Ctrl-C` does **not** quit, it only cancels the current action.
 - **Don't** `exit` the shell to "close" a session, that ends it (and the tab may
   close). Detach instead.
 
