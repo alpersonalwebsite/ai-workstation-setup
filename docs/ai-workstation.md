@@ -273,6 +273,24 @@ per monitor if you want the same rows on each. The trade-off: a pinned entry is
 tied to that display's identity, so unplugging or rearranging monitors can change
 the ID and the entry may need recreating.
 
+#### Example: a full multi-monitor keymap
+
+One worked layout, an ultrawide flanked by two portrait monitors, with every
+target as its own custom entry (assign the shortcuts on the entries in **Custom
+Size and Position**, and leave the built-in size actions unbound so nothing is
+double-bound):
+
+| Target | Shortcuts |
+|---|---|
+| Ultrawide, 5 columns (left→right) | `Ctrl-Opt-1 … 5` |
+| Left monitor, 4 rows (top→bottom) | `Ctrl-Opt-Q / A / Z / X` |
+| Right monitor, 4 rows (top→bottom) | `Ctrl-Opt-P / ; / . / /` |
+
+Mnemonic: left-hand keys drive the left monitor, right-hand keys the right, and
+going down the keyboard goes down the screen. Columns and side rows are all
+display-pinned, so one keystroke both moves the window to the right monitor and
+sizes it.
+
 ### [MonitorControl](https://github.com/MonitorControl/MonitorControl)
 
 ```bash
