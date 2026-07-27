@@ -117,6 +117,9 @@ proj                # fuzzy-pick a project you've opened before -> its session
 claude --resume     # reload the conversation (--continue = most recent)
 ```
 
+The picker lists projects most-recently-active first. For an alphabetical list
+instead, set `export PROJ_SORT=alpha` in your shell rc (default is `recent`).
+
 **Everyday commands** (tmux prefix is `Ctrl-b`):
 
 | Do this | Keys / command |

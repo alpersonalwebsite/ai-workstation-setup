@@ -10,21 +10,29 @@
 #               reattaches the same session rather than spawning duplicates.
 #   initclaude  scaffold a CLAUDE.md (project memory) in the current folder.
 
-# List Claude Code's known project dirs, most-recently-active first, deduped.
+# List Claude Code's known project dirs, deduped. Order follows $PROJ_SORT:
+#   recent (default) = most-recently-active first
+#   alpha            = alphabetical by path (case-insensitive)
 # Paths are read from each session's recorded `cwd` (accurate even when the
 # folder name contains hyphens, which the on-disk encoding mangles).
 _claude_projects() {
   emulate -L zsh
   local d cwd m
   local -a files
-  for d in ~/.claude/projects/*/(N); do
-    files=( "$d"*.jsonl(Nom) )   # N=nullglob, om=newest-first by mtime
-    (( ${#files} )) || continue
-    cwd=$(grep -ao '"cwd":"[^"]*"' "${files[1]}" 2>/dev/null | head -1 | sed 's/.*"cwd":"//; s/".*//')
-    [[ -n "$cwd" && -d "$cwd" ]] || continue
-    m=$(stat -f '%m' "${files[1]}" 2>/dev/null)
-    printf '%s\t%s\n' "$m" "$cwd"
-  done | sort -rn | cut -f2- | awk '!seen[$0]++'
+  {
+    for d in ~/.claude/projects/*/(N); do
+      files=( "$d"*.jsonl(Nom) )   # N=nullglob, om=newest-first by mtime
+      (( ${#files} )) || continue
+      cwd=$(grep -ao '"cwd":"[^"]*"' "${files[1]}" 2>/dev/null | head -1 | sed 's/.*"cwd":"//; s/".*//')
+      [[ -n "$cwd" && -d "$cwd" ]] || continue
+      m=$(stat -f '%m' "${files[1]}" 2>/dev/null)
+      printf '%s\t%s\n' "$m" "$cwd"
+    done
+  } | if [[ "${PROJ_SORT:-recent}" == "alpha" ]]; then
+        cut -f2- | sort -f
+      else
+        sort -rn | cut -f2-
+      fi | awk '!seen[$0]++'
 }
 
 # Attach or create a project's tmux session.
