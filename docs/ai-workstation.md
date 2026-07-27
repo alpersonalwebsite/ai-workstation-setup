@@ -165,7 +165,10 @@ almost everything is restored:
 **Auto-start tmux.** `@continuum-boot 'on'` (in `config/tmux.conf`) installs a
 login item so tmux starts at boot and continuum restores your saved sessions
 without you launching it. It arms itself the first time tmux runs after the
-setting is added, so start tmux once (`proj`) to install the login item.
+setting is added, so start tmux once (`proj`) to install the login item
+(`~/Library/LaunchAgents/Tmux.Start.plist`). macOS lists it under **System
+Settings > General > Login Items**, leave it enabled; it takes effect at the
+next login, not the current session.
 
 **Restore window positions.** Rectangle keeps your shortcuts but does not
 re-place windows. To bring your columns/rows back automatically, use an iTerm2
