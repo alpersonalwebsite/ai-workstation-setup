@@ -27,14 +27,21 @@ _claude_projects() {
 # Fuzzy-pick a project and attach/create its tmux session.
 proj() {
   emulate -L zsh
-  local dir sess
+  local dir sess hash
+  # No quotes around {}: fzf already substitutes it as a shell-quoted string,
+  # so "{}/CLAUDE.md" would look for a literally-quoted path and never match.
   dir=$(_claude_projects | fzf \
         --prompt='project ▸ ' --reverse --height=60% \
-        --preview 'test -f "{}/CLAUDE.md" && cat "{}/CLAUDE.md" || echo "(no CLAUDE.md yet — run: initclaude)"' \
+        --preview 'test -f {}/CLAUDE.md && cat {}/CLAUDE.md || echo "(no CLAUDE.md yet — run: initclaude)"' \
         --preview-window=right:55%:wrap) || return
   [[ -n "$dir" ]] || return
+  # Session name: readable basename plus a short hash of the FULL path, so
+  # ~/src/api and ~/work/api (and foo-bar vs foo_bar, which sanitize to the
+  # same string) get distinct sessions instead of silently sharing one.
+  hash=$(printf '%s' "$dir" | cksum | cut -d' ' -f1)
   sess=${dir:t}                 # basename
   sess=${sess//[^[:alnum:]_]/_} # tmux-safe name
+  sess="${sess}_${hash}"
   tmux has-session -t "$sess" 2>/dev/null || tmux new-session -d -s "$sess" -c "$dir"
   if [[ -n "$TMUX" ]]; then
     tmux switch-client -t "$sess"
@@ -51,7 +58,9 @@ initclaude() {
     print -u2 "❌ $target already exists — not overwriting."
     return 1
   fi
-  cat > "$target" <<'EOF'
+  # Guard the write: on a read-only dir or full disk, cat fails and we must not
+  # print the success line.
+  if ! cat > "$target" <<'EOF'
 # <Project name>
 
 ## What this is
@@ -76,5 +85,9 @@ initclaude() {
 - Writer:   <path or branch>
 - Reviewer: <path or branch/worktree>
 EOF
+  then
+    print -u2 "❌ Could not write $target."
+    return 1
+  fi
   print "✅ Wrote $target — fill in the blanks, or ask Claude: \"update CLAUDE.md with what we did\"."
 }

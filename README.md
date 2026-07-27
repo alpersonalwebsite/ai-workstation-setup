@@ -24,14 +24,16 @@ This is a personal collection rather than a framework. Take what is useful.
 ## Quick start (macOS)
 
 ```bash
-git clone git@github.com:alpersonalwebsite/ai-workstation-setup.git
+git clone https://github.com/alpersonalwebsite/ai-workstation-setup.git
 cd ai-workstation-setup
 ./setup.sh            # tmux + plugins + config + fzf + proj/initclaude
 ./setup.sh --apps     # the above, plus Rectangle, iTerm2, MonitorControl
 ```
 
-The script is idempotent, so it is safe to re-run, and it backs up any existing
-`~/.tmux.conf` before overwriting. Read
+The script is safe to re-run: every step checks before acting, and re-running
+with no changes to pull in leaves your machine untouched. It backs up an
+existing `~/.tmux.conf` before overwriting, but only when the contents actually
+differ, so repeat runs do not accumulate backup files. Read
 [`docs/ai-workstation.md`](docs/ai-workstation.md) for what each piece does and
 why it is there.
 
