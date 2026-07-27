@@ -96,32 +96,41 @@ Both live in [`../config/claude-proj.zsh`](../config/claude-proj.zsh), which
 
 ### Project workflow
 
-`proj` only lists projects Claude has already opened, so it is for *resuming*,
-not *creating*.
+One command, `proj`, handles both new and existing projects. Its tmux session
+name is derived from the folder path, so it always reattaches the *same* session
+instead of spawning duplicates, no hand-naming, no `tmux attach -t <name>`.
 
-**New project** (bootstrap it once):
+**New project:**
 
 ```bash
 mkdir my-project && cd my-project
-initclaude                 # optional: scaffold CLAUDE.md
-tmux new -s my-project     # persistent session, named after the folder
-claude                     # first run registers it; now it shows up in proj
+initclaude          # optional: scaffold CLAUDE.md (project memory)
+proj .              # create/attach this folder's tmux session
+claude              # start Claude inside it — now persistent
 ```
 
-**Resume a project** (anything Claude has opened before):
+**Resume a project:**
 
 ```bash
-proj                       # fuzzy-pick -> its folder + a tmux session
-claude --resume            # reload the conversation (--continue = most recent)
+proj                # fuzzy-pick a project you've opened before -> its session
+                    # (or `proj .` if you're already in the folder)
+claude --resume     # reload the conversation (--continue = most recent)
 ```
 
-End a session with "update CLAUDE.md with what we did" so the next resume starts
-with full context.
+**Everyday commands** (tmux prefix is `Ctrl-b`):
 
-> Note: `proj` names its tmux session with a hash suffix, so it will not
-> reattach a session you hand-named with `tmux new -s`; use
-> `tmux attach -t <name>` for those. Pick one convention to avoid duplicate
-> sessions for the same project.
+| Do this | Keys / command |
+|---|---|
+| Detach (leave it running) | `Ctrl-b` then `d` |
+| List running sessions | `tmux ls` |
+| Reattach the most recent | `tmux a` |
+| New window (e.g. reviewer) | `Ctrl-b c` |
+| Switch windows | `Ctrl-b n` / `p`, or click the bottom bar |
+| Quit Claude (not the same as detach) | `/exit` in Claude — a single `Ctrl-C` only cancels |
+
+**Detach** (`Ctrl-b d`) to keep a session alive; don't `exit` the shell, that
+ends the session (and your terminal may close the tab). End a work session with
+"update CLAUDE.md with what we did" so the next resume starts with full context.
 
 ## Window and display management
 

@@ -3,8 +3,11 @@
 # Installed to ~/.claude-proj.zsh by setup.sh and sourced from ~/.zshrc.
 # Canonical source: alpersonalwebsite/ai-workstation-setup, config/claude-proj.zsh
 #
-#   proj        fuzzy-pick one of your Claude Code projects and jump into its
-#               tmux session (creates it if needed). Scales to any number of projects.
+#   proj        no args: fuzzy-pick a project Claude has already opened and
+#               attach its tmux session. With a path (`proj .`, `proj <dir>`):
+#               attach/create a session for that folder, works for brand-new
+#               projects too. Session name is deterministic, so proj always
+#               reattaches the same session rather than spawning duplicates.
 #   initclaude  scaffold a CLAUDE.md (project memory) in the current folder.
 
 # List Claude Code's known project dirs, most-recently-active first, deduped.
@@ -24,17 +27,24 @@ _claude_projects() {
   done | sort -rn | cut -f2- | awk '!seen[$0]++'
 }
 
-# Fuzzy-pick a project and attach/create its tmux session.
+# Attach or create a project's tmux session.
+#   proj        fuzzy-pick from projects Claude has already opened
+#   proj .      use the current directory (or `proj <path>`) — works for NEW folders
 proj() {
   emulate -L zsh
   local dir sess hash
-  # No quotes around {}: fzf already substitutes it as a shell-quoted string,
-  # so "{}/CLAUDE.md" would look for a literally-quoted path and never match.
-  dir=$(_claude_projects | fzf \
-        --prompt='project ▸ ' --reverse --height=60% \
-        --preview 'test -f {}/CLAUDE.md && cat {}/CLAUDE.md || echo "(no CLAUDE.md yet — run: initclaude)"' \
-        --preview-window=right:55%:wrap) || return
-  [[ -n "$dir" ]] || return
+  if [[ -n "$1" ]]; then
+    dir=${1:A}                    # absolute path; handles `proj .` and new folders
+    [[ -d "$dir" ]] || { print -u2 "proj: no such directory: $1"; return 1; }
+  else
+    # No quotes around {}: fzf already substitutes it as a shell-quoted string,
+    # so "{}/CLAUDE.md" would look for a literally-quoted path and never match.
+    dir=$(_claude_projects | fzf \
+          --prompt='project ▸ ' --reverse --height=60% \
+          --preview 'test -f {}/CLAUDE.md && cat {}/CLAUDE.md || echo "(no CLAUDE.md yet — run: initclaude)"' \
+          --preview-window=right:55%:wrap) || return
+    [[ -n "$dir" ]] || return
+  fi
   # Session name: readable basename plus a short hash of the FULL path, so
   # ~/src/api and ~/work/api (and foo-bar vs foo_bar, which sanitize to the
   # same string) get distinct sessions instead of silently sharing one.
