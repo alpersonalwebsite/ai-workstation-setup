@@ -1,0 +1,32 @@
+# --- Secrets / credentials (never commit) ---
+.env
+.env.*
+!.env.example
+secrets/
+credentials*
+*.pem
+*.key
+
+# --- Logs & databases ---
+*.log
+*.sqlite
+*.sqlite3
+*.db
+
+# --- Dependencies / build output ---
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# --- Local tool state ---
+.claude/settings.local.json
