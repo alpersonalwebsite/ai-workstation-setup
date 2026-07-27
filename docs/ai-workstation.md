@@ -130,19 +130,22 @@ add `export PROJ_SORT=alpha` to `~/.zshrc.local` (default is `recent`).
 | New window (e.g. reviewer) | `Ctrl-b c` |
 | Switch windows | `Ctrl-b n` / `p`, or click the bottom bar |
 
-**Detach vs quit:**
+**Detach vs quit, and what ends a session:**
 
-The session keeps running no matter what, tmux doesn't stop when you look away.
-Detaching just unhooks it from your terminal window so you can close or reuse
-that window without killing the session.
+A tmux session runs on its own; detaching only unhooks it from the window. So
+closing or reusing a window never loses your work, only *ending* the session
+does.
 
-- **Detach** (`Ctrl-b d`) when you're about to **close the tab / quit iTerm2**, or
-  want to reuse the window for something else. Reattach later with `proj`. Just
-  leaving the window open? No need to detach.
-- **Quit Claude** with **`/exit`** when you're done with a conversation. A single
-  `Ctrl-C` does **not** quit, it only cancels the current action.
-- **Don't** `exit` the shell to "close" a session, that ends it (and the tab may
-  close). Detach instead.
+| Action | Effect |
+|---|---|
+| `/exit` in Claude | Closes Claude; you stay at the tmux shell (session alive) |
+| `Ctrl-b d` (detach) | Unhooks the window; session keeps running (reattach with `proj`) |
+| Close the iTerm2 tab/window | Session keeps running |
+| `exit` or `Ctrl-D` at the tmux shell | **Ends** the window → the last one ends the session |
+| `tmux kill-session` | **Ends** the session |
+
+A single `Ctrl-C` in Claude only cancels the current action, it does not quit.
+Mnemonic: **`/exit` closes Claude; `exit` closes the session.**
 
 End a work session with "update CLAUDE.md with what we did" so the next resume
 starts with full context.
