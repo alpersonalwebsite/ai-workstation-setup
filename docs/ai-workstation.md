@@ -363,6 +363,44 @@ monitor's capability.
   DisplayLink dock. Keep it on a native port and put lower-resolution secondary
   monitors on the dock.
 
+## Lighting and eye comfort
+
+Long coding sessions on a big, bright panel strain the eyes mostly through
+*contrast*: bright screen against a dark desk and a dark wall behind it. Two
+lights fix both.
+
+### BenQ ScreenBar Halo 2 (monitor light bar)
+
+Clamps on the top edge, centered (the weighted clip sits fine on the flat middle
+of a curved ultrawide). It has two independent lights plus an ambient sensor.
+
+**Front (task) light** — lights the keyboard/desk, not the screen:
+
+| Setting | Value |
+|---|---|
+| Auto-dim | **ON** (sensor holds ~500 lux so the desk tracks the room) |
+| Color temp, day | 4000–4500K (neutral) |
+| Color temp, evening | 2700–3500K (warm) |
+| Favorites | Save a **day** and an **evening** preset |
+
+Save a favorite: dial the light to the look you want, **long-press the favorite
+button (~3s)** until the bar blinks, then single-press it to recall.
+
+**Rear "Halo" (bias) light** — soft glow behind the monitor, ON but low
+(~10–20%), color temp matched to the Govee so the whole back-of-monitor zone
+reads as one tone.
+
+**Calibration check:** the asymmetric optics keep light off the screen. Glance at
+the panel; if you see a reflection or hotspot, tilt the beam further down onto
+the desk.
+
+### Govee strip (bias / ambient)
+
+Mounted behind the VIVO acoustic panel as a wall wash, set neutral-white and low.
+It and the Halo rear light are both bias sources, so **one leads and the other
+stays minimal** (Govee as the wall wash here; Halo rear kept low), and both share
+a color temperature so they don't clash.
+
 ## Habits
 
 These are not tools, but they matter more than the tools do.
