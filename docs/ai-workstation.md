@@ -41,9 +41,9 @@ Plugins, all from the [tmux-plugins](https://github.com/tmux-plugins) org:
 | [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum) | Auto-save every 15 min, auto-restore on start |
 
 Config lives in [`../config/tmux.conf`](../config/tmux.conf): mouse on, 50k
-scrollback, relaunch `claude` in restored panes, true color, `prefix + r` to
-reload. Restoring pane scrollback across restarts is available but off by
-default, see [Security notes](#security-notes).
+scrollback, true color, `prefix + r` to reload. Restored panes come back as
+plain shells (nothing auto-relaunched), and pane-scrollback restore is available
+but off by default, see [Security notes](#security-notes).
 
 Day-to-day keys (prefix is `Ctrl-b`):
 
@@ -153,22 +153,29 @@ starts with full context.
 ### Surviving a restart
 
 A reboot stops the tmux server, so nothing is literally "live" across it, but
-almost everything is restored:
+almost everything comes back:
 
 | Thing | After a reboot |
 |---|---|
 | Claude conversations | Saved to disk; reload with `claude --resume` |
-| tmux sessions (windows, panes, dirs) | Auto-restored by continuum |
+| tmux sessions (windows, panes, dirs) | Restored headlessly by continuum; panes come back as **plain shells** |
 | Rectangle column/row shortcuts | Kept (they live in Rectangle's prefs) |
-| Which window sat in which column | **Not** restored on its own, re-snap, or use an iTerm2 arrangement |
+| Which window sat in which column | **Not** restored on its own — re-snap, or use an iTerm2 arrangement |
+| iTerm2 opening at all | Only if iTerm2 is a Login Item (below) |
 
-**Auto-start tmux.** `@continuum-boot 'on'` (in `config/tmux.conf`) installs a
-login item so tmux starts at boot and continuum restores your saved sessions
-without you launching it. It arms itself the first time tmux runs after the
-setting is added, so start tmux once (`proj`) to install the login item
-(`~/Library/LaunchAgents/Tmux.Start.plist`). macOS lists it under **System
-Settings > General > Login Items**, leave it enabled; it takes effect at the
-next login, not the current session.
+**Two auto-start pieces, in two different places.** Both live in **System
+Settings > General > Login Items & Extensions**, but under different sections:
+
+- **tmux LaunchAgent** (`~/Library/LaunchAgents/Tmux.Start.plist`) → shows under
+  **Allow in the Background**. `@continuum-boot 'on'` (in `config/tmux.conf`)
+  creates it; it arms itself the first time tmux runs after the setting is added,
+  so start tmux once (`proj`) to install it. At login it starts tmux and
+  continuum restores your sessions in the background.
+- **iTerm2** → add it yourself under **Open at Login**. Without it, iTerm2 never
+  opens and the saved arrangement never runs.
+
+(Rectangle Pro is also under **Open at Login**; keep its own "Launch on login"
+toggle enabled.)
 
 **Restore window positions.** Rectangle keeps your shortcuts but does not
 re-place windows. To bring your columns/rows back automatically, use an iTerm2
@@ -176,12 +183,23 @@ window arrangement:
 
 1. Arrange your windows the way you want.
 2. iTerm2 menu: **Window > Save Window Arrangement**, name it (e.g. `Default`).
-3. iTerm2 **Settings > General > Startup**: set the window restoration policy to
+3. iTerm2 **Settings > General > Startup**: window restoration policy →
    **Open default window arrangement**.
+4. Add **iTerm2** to Login Items (see above) so it launches at boot.
 
-**After a reboot:** open iTerm2 (the arrangement restores the windows), then run
-`claude --resume` in each to reload the conversation. The sessions themselves are
-already back via continuum.
+**After a reboot, three steps per project:**
+
+1. iTerm2 launches (Login Items) and its arrangement reopens your windows — but
+   as **plain shells**, not attached to tmux.
+2. In each window, run **`proj`**. It reattaches to the session continuum
+   restored in the background (same deterministic name), dropping you back into
+   the project's panes.
+3. In each pane, run **`claude --resume`** (or `--continue`) to reload its
+   conversation.
+
+Step 2 is the one that's easy to skip: an arrangement-restored shell is *not*
+inside tmux, so running Claude there would be outside your persistent session.
+`proj` is what reconnects you.
 
 ## Window and display management
 
