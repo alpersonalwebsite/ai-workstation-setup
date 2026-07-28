@@ -14,6 +14,30 @@ commands are listed per tool in case you want to pick and choose.
 - **Changes:** It is the thing doing the work. The rest of this page exists to
   keep its sessions alive and its context accurate.
 
+### Claude Code settings
+
+A couple of keys in `~/.claude/settings.json` are what actually keep sessions
+resumable, which is the point of everything below.
+
+```json
+{
+  "cleanupPeriodDays": 365,
+  "tui": "fullscreen"
+}
+```
+
+- **`cleanupPeriodDays: 365`** is the one that matters. Claude Code prunes
+  on-disk session transcripts after this many days (default 30), and
+  `claude --resume` / `--continue` can only reload a conversation while its
+  transcript still exists. Raising it to a year means a project you set down for
+  weeks is still resumable. Trade-off: transcripts sit on disk longer, so keep
+  **FileVault** on (already recommended) since they are plaintext.
+- **`tui: fullscreen`** runs the TUI full-screen; cosmetic.
+
+The rest of my `~/.claude/` config (secret-scanning and gitignore hooks, the
+per-project scaffolding) lives in a separate dotfiles repo managed with GNU
+Stow, and is intentionally not duplicated here so the two cannot drift.
+
 ## Terminal
 
 ### [tmux](https://github.com/tmux/tmux/wiki) (+ resurrect, continuum, sensible, yank)
