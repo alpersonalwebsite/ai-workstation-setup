@@ -451,6 +451,24 @@ For the writer/reviewer split, separate folders work, but a
 working directory per branch, shared history, so both can run at once on
 different branches.
 
+## Claude Code config and skills
+
+Starting-point Claude Code config lives in [`../claude/`](../claude/), kept
+separate from the shell and display config so it can grow as you add skills:
+
+- [`claude/CLAUDE.md`](../claude/CLAUDE.md) is a template for the global
+  instructions Claude Code loads every session (writing voice, git hygiene,
+  security, memory). Copy it to `~/.claude/CLAUDE.md` and make the rules yours.
+- [`claude/skills/`](../claude/skills/) holds one folder per skill. Each is a
+  `SKILL.md` that Claude invokes when a task matches its description.
+  - [`writing-voice`](../claude/skills/writing-voice/) captures your writing
+    voice across professional and personal registers so drafts sound like you.
+    It ships as a template; fill in your own examples.
+
+Install a skill by copying its folder into `~/.claude/skills/`. Both `CLAUDE.md`
+and the skills are good candidates for a dotfiles repo so they restore on a new
+machine.
+
 ## Security notes
 
 - tmux runs locally. TPM only uses the network to download plugin code when you

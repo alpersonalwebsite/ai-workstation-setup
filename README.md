@@ -20,6 +20,8 @@ This is a personal collection rather than a framework. Take what is useful.
 | [`setup.sh`](setup.sh) | Idempotent installer for the terminal side of the setup |
 | [`config/tmux.conf`](config/tmux.conf) | tmux configuration (persistent sessions, big scrollback) |
 | [`config/claude-proj.zsh`](config/claude-proj.zsh) | `proj` and `initclaude` shell functions |
+| [`claude/CLAUDE.md`](claude/CLAUDE.md) | Template global instructions for Claude Code |
+| [`claude/skills/`](claude/skills/) | Claude Code skills, one folder each (e.g. `writing-voice`) |
 
 ## Quick start (macOS)
 
