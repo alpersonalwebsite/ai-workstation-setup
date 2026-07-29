@@ -29,6 +29,8 @@ a personal message.
 - **RCA / technical review:** finding or verdict first, then the evidence that
   proves it, then the fix. One finding per block; worst first when there are
   several.
+- **Email:** [subject states the ask? warm bookends, or straight in? same shape
+  as an update?]
 - **PR / commit:** why, then what changed, then reviewer notes. Follow your git
   rules in `CLAUDE.md`.
 - **Docs / README:** scannable. Headers, tables, short lists; show an example
