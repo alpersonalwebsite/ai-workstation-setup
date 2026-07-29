@@ -1,6 +1,6 @@
 ---
 name: writing-voice
-description: Your writing voice for prose meant for a person to read. Use when composing or editing messages, updates, emails, posts, PR/commit descriptions, or docs, not source code.
+description: Your writing voice for drafting or editing a standalone piece of writing for someone else: a chat or message you send, an email, update, notification, request, closure, PR or commit description, doc, or post. Not for source code, and not for your own chat replies (those belong in your global CLAUDE.md).
 ---
 
 This skill carries your writing voice so drafts come out sounding like you. The
