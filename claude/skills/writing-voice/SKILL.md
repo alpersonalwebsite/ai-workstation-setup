@@ -1,6 +1,6 @@
 ---
 name: writing-voice
-description: Your writing voice for prose meant for a person to read. Use when composing or editing messages, updates, emails, posts, PR/commit descriptions, or docs, not source code. Template: fill in the bracketed parts with your own voice.
+description: Your writing voice for prose meant for a person to read. Use when composing or editing messages, updates, emails, posts, PR/commit descriptions, or docs, not source code.
 ---
 
 This skill carries your writing voice so drafts come out sounding like you. The

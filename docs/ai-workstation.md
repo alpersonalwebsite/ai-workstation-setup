@@ -34,9 +34,10 @@ resumable, which is the point of everything below.
   **FileVault** on (already recommended) since they are plaintext.
 - **`tui: fullscreen`** runs the TUI full-screen; cosmetic.
 
-The rest of my `~/.claude/` config (secret-scanning and gitignore hooks, the
-per-project scaffolding) lives in a separate dotfiles repo managed with GNU
-Stow, and is intentionally not duplicated here so the two cannot drift.
+My `~/.claude/` hooks (secret-scanning, gitignore validation) and per-project
+scaffolding are not shipped here; they live in a separate dotfiles repo managed
+with GNU Stow. Starting-point templates for the global instructions and skills
+do ship here, see [Claude Code config and skills](#claude-code-config-and-skills).
 
 ## Terminal
 
@@ -454,20 +455,28 @@ different branches.
 ## Claude Code config and skills
 
 Starting-point Claude Code config lives in [`../claude/`](../claude/), kept
-separate from the shell and display config so it can grow as you add skills:
+separate from the shell and display config so it can grow as you add skills.
+(For the `~/.claude/settings.json` keys that keep sessions resumable, see
+[Claude Code settings](#claude-code-settings) above.)
 
-- [`claude/CLAUDE.md`](../claude/CLAUDE.md) is a template for the global
-  instructions Claude Code loads every session (writing voice, git hygiene,
-  security, memory). Copy it to `~/.claude/CLAUDE.md` and make the rules yours.
+- [`claude/CLAUDE.example.md`](../claude/CLAUDE.example.md) is a template for the
+  global instructions Claude Code loads every session (writing voice, git
+  hygiene, security, memory). It carries the `.example` suffix on purpose: a file
+  literally named `CLAUDE.md` in this repo would be loaded as live directives for
+  anyone working here. Copy it to `~/.claude/CLAUDE.md` and make the rules yours.
+  This is the global config, distinct from the per-project `CLAUDE.md` that
+  [`initclaude`](#a-claudemd-per-project) scaffolds.
 - [`claude/skills/`](../claude/skills/) holds one folder per skill. Each is a
   `SKILL.md` that Claude invokes when a task matches its description.
   - [`writing-voice`](../claude/skills/writing-voice/) captures your writing
     voice across professional and personal registers so drafts sound like you.
-    It ships as a template; fill in your own examples.
+    It ships as a template.
 
-Install a skill by copying its folder into `~/.claude/skills/`. Both `CLAUDE.md`
-and the skills are good candidates for a dotfiles repo so they restore on a new
-machine.
+To install a skill, fill in its bracketed placeholders first, then copy the
+folder into `~/.claude/skills/`. A skill copied with placeholders still matches
+its description, so Claude would load the empty template as guidance, which is
+worse than not having the skill at all. Both the `CLAUDE.md` and the skills are
+good candidates for a dotfiles repo so they restore on a new machine.
 
 ## Security notes
 
