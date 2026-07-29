@@ -20,6 +20,8 @@ This is a personal collection rather than a framework. Take what is useful.
 | [`setup.sh`](setup.sh) | Idempotent installer for the terminal side of the setup |
 | [`config/tmux.conf`](config/tmux.conf) | tmux configuration (persistent sessions, big scrollback) |
 | [`config/claude-proj.zsh`](config/claude-proj.zsh) | `proj` and `initclaude` shell functions |
+| [`claude/CLAUDE.example.md`](claude/CLAUDE.example.md) | Template global instructions for Claude Code (copy to `~/.claude/CLAUDE.md`) |
+| [`claude/skills/`](claude/skills/) | Claude Code skills, one folder each (e.g. `writing-voice`) |
 
 ## Quick start (macOS)
 
@@ -42,6 +44,10 @@ why it is there.
 
 Then open a shell and run `proj` to fuzzy-pick a project, or `initclaude` inside
 a project folder to scaffold a `CLAUDE.md`.
+
+The [`claude/`](claude/) templates (global instructions and skills) are not
+installed by `setup.sh`; copy them into `~/.claude/` by hand. See
+[Claude Code config and skills](docs/ai-workstation.md#claude-code-config-and-skills).
 
 ## What this fetches
 
