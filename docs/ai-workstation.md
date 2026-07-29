@@ -464,8 +464,8 @@ separate from the shell and display config so it can grow as you add skills.
   hygiene, security, memory). It carries the `.example` suffix on purpose: a file
   literally named `CLAUDE.md` in this repo would be loaded as live directives for
   anyone working here. Copy it to `~/.claude/CLAUDE.md` and make the rules yours.
-  This is the global config, distinct from the per-project `CLAUDE.md` that
-  [`initclaude`](#a-claudemd-per-project) scaffolds.
+  This is the global config, distinct from the
+  [per-project `CLAUDE.md`](#a-claudemd-per-project) that `initclaude` scaffolds.
 - [`claude/skills/`](../claude/skills/) holds one folder per skill. Each is a
   `SKILL.md` that Claude invokes when a task matches its description.
   - [`writing-voice`](../claude/skills/writing-voice/) captures your writing
@@ -475,8 +475,8 @@ separate from the shell and display config so it can grow as you add skills.
 To install a skill, fill in its bracketed placeholders first, then copy the
 folder into `~/.claude/skills/`. A skill copied with placeholders still matches
 its description, so Claude would load the empty template as guidance, which is
-worse than not having the skill at all. Both the `CLAUDE.md` and the skills are
-good candidates for a dotfiles repo so they restore on a new machine.
+worse than not having the skill at all. Both your `~/.claude/CLAUDE.md` and the
+skills are good candidates for a dotfiles repo so they restore on a new machine.
 
 ## Security notes
 
