@@ -455,7 +455,16 @@ moderate or turn it off. For terminal and coding work, warmer is fine.
 
 **In the monitor's OSD:** turn off dynamic contrast or aggressive local dimming
 (the brightness pumping as content changes is fatiguing), and keep the input at
-its full refresh rate.
+its full refresh rate. On a Samsung, the Eye Care menu also carries **Adaptive
+Picture** (leave off: it auto-drives brightness and fights MonitorControl) and
+**Eye Saver Mode** (leave off if you use Night Shift, or you double-warm).
+
+**Keep one source of truth for brightness.** Drive it from MonitorControl, not
+the monitor's buttons. If the OSD brightness and MonitorControl disagree (for
+example a level set in the OSD at first setup), the panel and the slider drift
+apart, worst with "Assume last saved value is valid" trusting a stale cache.
+Resetting the monitor to factory defaults clears the manual value and lets
+MonitorControl be the single authority again.
 
 **Caveat:** MonitorControl's hardware brightness (DDC) works over a native
 DisplayPort connection. Over a DisplayLink dock, DDC usually does not pass
