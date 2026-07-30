@@ -11,6 +11,20 @@ in context. The rules below are a sensible starting point. Adapt them to you.
 - For richer, format- and register-specific voice (including personal writing),
   see `skills/writing-voice/SKILL.md`.
 
+## Verification
+
+- A technical claim (API, runtime, framework, config semantics, system state)
+  that goes into a durable artifact (code comment, commit message, PR, or a
+  conclusion you act on) must be either backed by tool output shown in the
+  session, or labeled "unverified, from memory." No unlabeled claims from memory.
+- When hardening or fixing something, measure before and after and state what the
+  prior behavior actually was. "Hardening" that narrows working input is a
+  regression.
+- Brevity never drops verification status. Keep measured separate from inferred,
+  even when summarizing.
+- For a deliberate pre-ship check of a claim-heavy artifact, run the
+  `/fact-check` skill (see `skills/fact-check/SKILL.md`).
+
 ## Git hygiene
 
 - Write descriptive commit and PR messages: what changed and why, enough that a

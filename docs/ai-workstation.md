@@ -471,12 +471,18 @@ separate from the shell and display config so it can grow as you add skills.
   - [`writing-voice`](../claude/skills/writing-voice/) captures your writing
     voice across professional and personal registers so drafts sound like you.
     It ships as a template.
+  - [`fact-check`](../claude/skills/fact-check/) checks the technical claims in a
+    diff, file, commit, or PR against the toolchain before you ship them, so
+    unverified statements do not land in durable artifacts. Ready to use as-is:
+    manual only, and unable to use the Write or Edit tools (`disallowed-tools`),
+    though it can still run shell commands with your approval.
 
-To install a skill, fill in its bracketed placeholders first, then copy the
-folder into `~/.claude/skills/`. A skill copied with placeholders still matches
-its description, so Claude would load the empty template as guidance, which is
-worse than not having the skill at all. Both your `~/.claude/CLAUDE.md` and the
-skills are good candidates for a dotfiles repo so they restore on a new machine.
+To install a skill, fill in any bracketed placeholders first (`writing-voice` is
+a template to complete; `fact-check` is ready as-is), then copy the folder into
+`~/.claude/skills/`. A template copied with its placeholders still matches its
+description, so Claude would load the empty prompts as guidance, which is worse
+than not having the skill at all. Both your `~/.claude/CLAUDE.md` and the skills
+are good candidates for a dotfiles repo so they restore on a new machine.
 
 ## Security notes
 
