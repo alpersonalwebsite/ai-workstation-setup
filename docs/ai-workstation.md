@@ -475,7 +475,7 @@ or wake. So after a reset, resync MonitorControl too: nudge its brightness slide
 to write a fresh value, or toggle "Assume last saved settings are valid" off and back
 on. Then MonitorControl is the single authority again.
 
-**How MonitorControl labels each display (its Control method):**
+**How MonitorControl controls each display (shown as its Control method):**
 
 - **Hardware (Apple):** the built-in display, driven by macOS directly. Nothing
   to configure.
