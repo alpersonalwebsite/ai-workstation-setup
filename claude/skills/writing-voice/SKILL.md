@@ -1,6 +1,6 @@
 ---
 name: writing-voice
-description: Your writing voice for prose meant for a person to read. Use when composing or editing messages, updates, emails, posts, PR/commit descriptions, or docs, not source code.
+description: Your writing voice for drafting or editing a standalone piece of writing for someone else: a chat or message you send, an email, update, notification, request, closure, RCA or review, PR or commit description, or doc. Not for source code, and not for Claude's replies to you (those follow your global CLAUDE.md).
 ---
 
 This skill carries your writing voice so drafts come out sounding like you. The
@@ -29,6 +29,8 @@ a personal message.
 - **RCA / technical review:** finding or verdict first, then the evidence that
   proves it, then the fix. One finding per block; worst first when there are
   several.
+- **Email:** [subject states the ask? warm bookends, or straight in? same shape
+  as an update?]
 - **PR / commit:** why, then what changed, then reviewer notes. Follow your git
   rules in `CLAUDE.md`.
 - **Docs / README:** scannable. Headers, tables, short lists; show an example
