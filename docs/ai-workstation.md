@@ -479,7 +479,7 @@ on. Then MonitorControl is the single authority again.
 
 - **Hardware (Apple):** the built-in display, driven by macOS directly. Nothing
   to configure.
-- **Hardware (DDC):** a monitor on a native connection that carries DDC/CI
+- **Hardware control (DDC):** a monitor on a native connection that carries DDC/CI
   (DisplayPort, HDMI, or USB-C straight to the Mac, not through a DisplayLink
   dock). One exception: the built-in HDMI port on M1 Macs and the entry-level M2
   Mac mini carries no DDC even connected directly, so use USB-C or DisplayPort
@@ -490,7 +490,7 @@ on. Then MonitorControl is the single authority again.
   appears as a "virtual display" and does not pass DDC, so MonitorControl can
   only dim it with an overlay, not the real backlight. That is a fallback, so set
   those monitors' brightness with their own buttons instead (or connect them
-  natively, off the dock, to get Hardware (DDC)).
+  natively, off the dock, to get hardware control over DDC).
 
 ## Habits
 
