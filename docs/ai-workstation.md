@@ -438,7 +438,7 @@ macOS **Automatically adjust brightness** for the laptop display, and in
 and Apple displays** so the external follows it. Also turn on **Combine hardware
 and software dimming** (dims below the panel's hardware floor for a dark room,
 and sidesteps the PWM backlight flicker some panels show at low brightness),
-**Enable smooth brightness transitions**, and **Assume last saved value is valid**
+**Enable smooth brightness transitions**, and **Assume last saved settings are valid**
 so the level survives a restart or wake. That last one is reported flaky on macOS
 Sequoia (MonitorControl 4.3.x), so confirm the brightness actually comes back
 after a reboot. Rule of thumb: a white page should look like paper under the room
@@ -468,11 +468,11 @@ Picture** (leave off: it auto-drives brightness and fights MonitorControl) and
 **Keep one source of truth for brightness.** Drive it from MonitorControl, not
 the monitor's buttons. If the OSD brightness and MonitorControl disagree (for
 example a level set in the OSD at first setup), the panel and the slider drift
-apart, worst with "Assume last saved value is valid" trusting a stale cache.
+apart, worst with "Assume last saved settings are valid" trusting a stale cache.
 Resetting the monitor to factory defaults clears the manual value on the panel,
 but MonitorControl keeps its own cached brightness and can reapply it on startup
 or wake. So after a reset, resync MonitorControl too: nudge its brightness slider
-to write a fresh value, or toggle "Assume last saved value is valid" off and back
+to write a fresh value, or toggle "Assume last saved settings are valid" off and back
 on. Then MonitorControl is the single authority again.
 
 **How MonitorControl labels each display (its Control method):**
@@ -481,7 +481,9 @@ on. Then MonitorControl is the single authority again.
   to configure.
 - **Hardware (DDC):** a monitor on a native connection that carries DDC/CI
   (DisplayPort, HDMI, or USB-C straight to the Mac, not through a DisplayLink
-  dock). MonitorControl adjusts the real backlight, and its "combine hardware and
+  dock). One exception: the built-in HDMI port on M1 Macs and the entry-level M2
+  Mac mini carries no DDC even connected directly, so use USB-C or DisplayPort
+  there. MonitorControl adjusts the real backlight, and its "combine hardware and
   software dimming" range extends below the panel's floor. This is what you want
   for the screen you look at most.
 - **Software (shade)**, shown with a warning icon: a DisplayLink (dock) monitor
