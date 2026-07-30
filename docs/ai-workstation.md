@@ -492,6 +492,35 @@ on. Then MonitorControl is the single authority again.
   those monitors' brightness with their own buttons instead (or connect them
   natively, off the dock, to get hardware control over DDC).
 
+### Terminal colors
+
+A terminal fills the screen, so its palette is most of what your eyes see all
+day. Aim for a soft dark theme, not maximum contrast. The setting names below are
+iTerm2's; other terminals have equivalents.
+
+- **Off-black background, off-white text**, not pure `#000000` on `#ffffff`.
+  Around `#15191f` background with `#dcdcdc` foreground is comfortable. Pure white
+  on pure black is the harshest possible contrast and causes halation (text edges
+  appearing to glow), worse with any astigmatism.
+- **Bold heavier, not brighter.** Turn off **Brighten bold text** (older iTerm2
+  labels it "Use bright version of ANSI colors for bold text") and do not set a
+  pure-white custom bold color; let bold use the normal foreground so it reads as
+  weight, not glare. Keep **Minimum Contrast** at 0 so nothing is forced harsher.
+- **Opaque window**, no transparency or blur (text over anything but a solid
+  color is harder to read), and a **steady, non-blinking cursor**.
+- A legible monospace at a size you read without leaning in, with a little line
+  spacing.
+- **Apply the settings per profile and per appearance mode.** If you keep one
+  profile per project, a tweak on a single profile does not propagate; each needs
+  it. And with separate light/dark colors enabled, **Brighten Bold Text** and
+  **Minimum Contrast** each have Dark and Light variants, so fixing it in Dark
+  mode leaves Light mode untouched. Set it in both, or the glare survives where
+  you did not look.
+
+This pairs with the screen and lighting settings above: the terminal's dark
+background is most of the screen's light output, so matching screen brightness to
+the room is what keeps the whole picture comfortable.
+
 ## Habits
 
 These are not tools, but they matter more than the tools do.
