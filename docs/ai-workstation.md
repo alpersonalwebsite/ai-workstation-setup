@@ -474,7 +474,8 @@ separate from the shell and display config so it can grow as you add skills.
   - [`fact-check`](../claude/skills/fact-check/) checks the technical claims in a
     diff, file, commit, or PR against the toolchain before you ship them, so
     unverified statements do not land in durable artifacts. Ready to use as-is:
-    manual only, and read-only by construction (`disallowed-tools: Write Edit`).
+    manual only, and unable to use the Write or Edit tools (`disallowed-tools`),
+    though it can still run shell commands with your approval.
 
 To install a skill, fill in any bracketed placeholders first (`writing-voice` is
 a template to complete; `fact-check` is ready as-is), then copy the folder into

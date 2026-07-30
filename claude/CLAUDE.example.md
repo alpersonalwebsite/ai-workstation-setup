@@ -23,7 +23,7 @@ in context. The rules below are a sensible starting point. Adapt them to you.
 - Brevity never drops verification status. Keep measured separate from inferred,
   even when summarizing.
 - For a deliberate pre-ship check of a claim-heavy artifact, run the
-  `/fact-check` skill (see `skills/`).
+  `/fact-check` skill (see `skills/fact-check/SKILL.md`).
 
 ## Git hygiene
 
