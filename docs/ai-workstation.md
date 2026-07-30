@@ -134,6 +134,18 @@ proj .              # create/attach this folder's tmux session
 claude              # start Claude inside it — now persistent
 ```
 
+**Existing project (no `CLAUDE.md` yet):**
+
+```bash
+cd ~/Documents/that-old-project   # get into the folder (or `proj` to jump there)
+initclaude                        # scaffold CLAUDE.md; skips if one already exists
+claude                            # then ask: "fill in CLAUDE.md from the codebase"
+```
+
+`initclaude` never overwrites an existing `CLAUDE.md`, so it is safe to run on any
+repo. For an older project with real code, it is easier to let Claude populate the
+template from the actual code than to fill it in by hand.
+
 **Resume a project:**
 
 ```bash
