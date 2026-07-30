@@ -468,10 +468,19 @@ apart, worst with "Assume last saved value is valid" trusting a stale cache.
 Resetting the monitor to factory defaults clears the manual value and lets
 MonitorControl be the single authority again.
 
-**Caveat:** MonitorControl's hardware brightness (DDC) works over a native
-DisplayPort connection. Over a DisplayLink dock, DDC usually does not pass
-through, so a dock-connected monitor may only get software dimming, still useful,
-just a different lever.
+**How MonitorControl labels each display (its Control method):**
+
+- **Hardware (Apple):** the built-in display, driven by macOS directly. Nothing
+  to configure.
+- **Hardware (DDC):** a monitor on a native DisplayPort or USB-C connection.
+  MonitorControl adjusts the real backlight, and its "combine hardware and
+  software dimming" range extends below the panel's floor. This is what you want
+  for the screen you look at most.
+- **Software (shade)**, shown with a warning icon: a DisplayLink (dock) monitor
+  appears as a "virtual display" and does not pass DDC, so MonitorControl can
+  only dim it with an overlay, not the real backlight. That is a fallback, so set
+  those monitors' brightness with their own buttons instead (or connect them
+  natively, off the dock, to get Hardware (DDC)).
 
 ## Habits
 
