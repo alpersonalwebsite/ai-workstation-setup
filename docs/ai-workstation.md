@@ -426,6 +426,72 @@ It and the Halo rear light are both bias sources, so **one leads and the other
 stays minimal** (Govee as the wall wash here; Halo rear kept low), and both share
 a color temperature so they don't clash.
 
+### Screen brightness and blue light
+
+The screen is the other half of the contrast problem. Two settings and one
+schedule keep it easy on the eyes.
+
+**Match brightness to the room.** An external monitor has no ambient sensor, so
+it sits at one brightness all day. Bridge that with the built-in sensor: turn on
+macOS **Automatically adjust brightness** for the laptop display, and in
+[MonitorControl](#monitorcontrol) enable **Sync brightness changes from Built-in
+and Apple displays** so the external follows it. Also turn on **Combine hardware
+and software dimming** (dims below the panel's hardware floor for a dark room,
+and sidesteps the PWM backlight flicker some panels show at low brightness),
+**Enable smooth brightness transitions**, and **Assume last saved settings are valid**
+so the level survives a restart or wake. That last one is reported flaky on macOS
+Sequoia (MonitorControl 4.3.x), so confirm the brightness actually comes back
+after a reboot. Rule of thumb: a white page should look like paper under the room
+light, not a lightbulb.
+
+**Warm it in the evening.** Turn on macOS **Night Shift** and set the schedule to
+**Sunset to Sunrise**, which enables it automatically each evening (the "Turn On
+Until Sunrise" button is only a manual start-now and is not needed once the
+schedule is set). Sunset to Sunrise needs **Location Services** on (specifically
+the "Setting Time Zone" system service), because macOS computes local sunset and
+sunrise from your location; if you keep Location Services off, use a **Custom**
+schedule with fixed times instead. Set the color-temperature slider to moderate,
+or a touch toward **More Warm**. Night Shift **may** apply to external displays
+(support depends on the monitor, so check the result on that screen); use it *or*
+the monitor's own low-blue-light mode, not both, or you double-warm. It shifts every
+color on screen, so for color-sensitive evening work (photos, design) keep it
+moderate or turn it off. For terminal and coding work, warmer is fine.
+
+**In the monitor's OSD:** turn off whatever auto-adjusts contrast as content
+changes (the brightness pumping is fatiguing). Its name varies by model: older
+Samsungs have **Dynamic Contrast**, QLED/HDR ones like the ViewFinity S9 have
+**Local Dimming** instead, so turn off whichever your menu actually shows. Keep
+the input at its full refresh rate. The Eye Care menu also carries **Adaptive
+Picture** (leave off: it auto-drives brightness and fights MonitorControl) and
+**Eye Saver Mode** (leave off if you use Night Shift, or you double-warm).
+
+**Keep one source of truth for brightness.** Drive it from MonitorControl, not
+the monitor's buttons. If the OSD brightness and MonitorControl disagree (for
+example a level set in the OSD at first setup), the panel and the slider drift
+apart, worst with "Assume last saved settings are valid" trusting a stale cache.
+Resetting the monitor to factory defaults clears the manual value on the panel,
+but MonitorControl keeps its own cached brightness and can reapply it on startup
+or wake. So after a reset, resync MonitorControl too: nudge its brightness slider
+to write a fresh value, or toggle "Assume last saved settings are valid" off and back
+on. Then MonitorControl is the single authority again.
+
+**How MonitorControl controls each display (shown as its Control method):**
+
+- **Hardware (Apple):** the built-in display, driven by macOS directly. Nothing
+  to configure.
+- **Hardware control (DDC):** a monitor on a native connection that carries DDC/CI
+  (DisplayPort, HDMI, or USB-C straight to the Mac, not through a DisplayLink
+  dock). One exception: the built-in HDMI port on M1 Macs and the entry-level M2
+  Mac mini carries no DDC even connected directly, so use USB-C or DisplayPort
+  there. MonitorControl adjusts the real backlight, and its "combine hardware and
+  software dimming" range extends below the panel's floor. This is what you want
+  for the screen you look at most.
+- **Software (shade)**, shown with a warning icon: a DisplayLink (dock) monitor
+  appears as a "virtual display" and does not pass DDC, so MonitorControl can
+  only dim it with an overlay, not the real backlight. That is a fallback, so set
+  those monitors' brightness with their own buttons instead (or connect them
+  natively, off the dock, to get hardware control over DDC).
+
 ## Habits
 
 These are not tools, but they matter more than the tools do.
