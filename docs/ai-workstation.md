@@ -444,9 +444,14 @@ Sequoia (MonitorControl 4.3.x), so confirm the brightness actually comes back
 after a reboot. Rule of thumb: a white page should look like paper under the room
 light, not a lightbulb.
 
-**Warm it in the evening.** Turn on macOS **Night Shift** on a schedule; it
-applies to external displays too. Use Night Shift *or* the monitor's own
-low-blue-light mode, not both, or you double-warm.
+**Warm it in the evening.** Turn on macOS **Night Shift** and set the schedule to
+**Sunset to Sunrise**, which enables it automatically each evening (the "Turn On
+Until Sunrise" button is only a manual start-now and is not needed once the
+schedule is set). Set the color-temperature slider to moderate, or a touch toward
+**More Warm**. Night Shift applies to external displays too; use it *or* the
+monitor's own low-blue-light mode, not both, or you double-warm. It shifts every
+color on screen, so for color-sensitive evening work (photos, design) keep it
+moderate or turn it off. For terminal and coding work, warmer is fine.
 
 **In the monitor's OSD:** turn off dynamic contrast or aggressive local dimming
 (the brightness pumping as content changes is fatiguing), and keep the input at
