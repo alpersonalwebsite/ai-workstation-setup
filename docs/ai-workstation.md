@@ -447,9 +447,13 @@ light, not a lightbulb.
 **Warm it in the evening.** Turn on macOS **Night Shift** and set the schedule to
 **Sunset to Sunrise**, which enables it automatically each evening (the "Turn On
 Until Sunrise" button is only a manual start-now and is not needed once the
-schedule is set). Set the color-temperature slider to moderate, or a touch toward
-**More Warm**. Night Shift applies to external displays too; use it *or* the
-monitor's own low-blue-light mode, not both, or you double-warm. It shifts every
+schedule is set). Sunset to Sunrise needs **Location Services** on (specifically
+the "Setting Time Zone" system service), because macOS computes local sunset and
+sunrise from your location; if you keep Location Services off, use a **Custom**
+schedule with fixed times instead. Set the color-temperature slider to moderate,
+or a touch toward **More Warm**. Night Shift **may** apply to external displays
+(support depends on the monitor, so check the result on that screen); use it *or*
+the monitor's own low-blue-light mode, not both, or you double-warm. It shifts every
 color on screen, so for color-sensitive evening work (photos, design) keep it
 moderate or turn it off. For terminal and coding work, warmer is fine.
 
@@ -465,15 +469,19 @@ Picture** (leave off: it auto-drives brightness and fights MonitorControl) and
 the monitor's buttons. If the OSD brightness and MonitorControl disagree (for
 example a level set in the OSD at first setup), the panel and the slider drift
 apart, worst with "Assume last saved value is valid" trusting a stale cache.
-Resetting the monitor to factory defaults clears the manual value and lets
-MonitorControl be the single authority again.
+Resetting the monitor to factory defaults clears the manual value on the panel,
+but MonitorControl keeps its own cached brightness and can reapply it on startup
+or wake. So after a reset, resync MonitorControl too: nudge its brightness slider
+to write a fresh value, or toggle "Assume last saved value is valid" off and back
+on. Then MonitorControl is the single authority again.
 
 **How MonitorControl labels each display (its Control method):**
 
 - **Hardware (Apple):** the built-in display, driven by macOS directly. Nothing
   to configure.
-- **Hardware (DDC):** a monitor on a native DisplayPort or USB-C connection.
-  MonitorControl adjusts the real backlight, and its "combine hardware and
+- **Hardware (DDC):** a monitor on a native connection that carries DDC/CI
+  (DisplayPort, HDMI, or USB-C straight to the Mac, not through a DisplayLink
+  dock). MonitorControl adjusts the real backlight, and its "combine hardware and
   software dimming" range extends below the panel's floor. This is what you want
   for the screen you look at most.
 - **Software (shade)**, shown with a warning icon: a DisplayLink (dock) monitor
