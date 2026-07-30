@@ -453,9 +453,11 @@ monitor's own low-blue-light mode, not both, or you double-warm. It shifts every
 color on screen, so for color-sensitive evening work (photos, design) keep it
 moderate or turn it off. For terminal and coding work, warmer is fine.
 
-**In the monitor's OSD:** turn off dynamic contrast or aggressive local dimming
-(the brightness pumping as content changes is fatiguing), and keep the input at
-its full refresh rate. On a Samsung, the Eye Care menu also carries **Adaptive
+**In the monitor's OSD:** turn off whatever auto-adjusts contrast as content
+changes (the brightness pumping is fatiguing). Its name varies by model: older
+Samsungs have **Dynamic Contrast**, QLED/HDR ones like the ViewFinity S9 have
+**Local Dimming** instead, so turn off whichever your menu actually shows. Keep
+the input at its full refresh rate. The Eye Care menu also carries **Adaptive
 Picture** (leave off: it auto-drives brightness and fights MonitorControl) and
 **Eye Saver Mode** (leave off if you use Night Shift, or you double-warm).
 
