@@ -426,6 +426,37 @@ It and the Halo rear light are both bias sources, so **one leads and the other
 stays minimal** (Govee as the wall wash here; Halo rear kept low), and both share
 a color temperature so they don't clash.
 
+### Screen brightness and blue light
+
+The screen is the other half of the contrast problem. Two settings and one
+schedule keep it easy on the eyes.
+
+**Match brightness to the room.** An external monitor has no ambient sensor, so
+it sits at one brightness all day. Bridge that with the built-in sensor: turn on
+macOS **Automatically adjust brightness** for the laptop display, and in
+[MonitorControl](#monitorcontrol) enable **Sync brightness changes from Built-in
+and Apple displays** so the external follows it. Also turn on **Combine hardware
+and software dimming** (dims below the panel's hardware floor for a dark room,
+and sidesteps the PWM backlight flicker some panels show at low brightness),
+**Enable smooth brightness transitions**, and **Assume last saved value is valid**
+so the level survives a restart or wake. That last one is reported flaky on macOS
+Sequoia (MonitorControl 4.3.x), so confirm the brightness actually comes back
+after a reboot. Rule of thumb: a white page should look like paper under the room
+light, not a lightbulb.
+
+**Warm it in the evening.** Turn on macOS **Night Shift** on a schedule; it
+applies to external displays too. Use Night Shift *or* the monitor's own
+low-blue-light mode, not both, or you double-warm.
+
+**In the monitor's OSD:** turn off dynamic contrast or aggressive local dimming
+(the brightness pumping as content changes is fatiguing), and keep the input at
+its full refresh rate.
+
+**Caveat:** MonitorControl's hardware brightness (DDC) works over a native
+DisplayPort connection. Over a DisplayLink dock, DDC usually does not pass
+through, so a dock-connected monitor may only get software dimming, still useful,
+just a different lever.
+
 ## Habits
 
 These are not tools, but they matter more than the tools do.
