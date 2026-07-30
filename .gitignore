@@ -32,4 +32,5 @@ Thumbs.db
 .claude/settings.local.json
 
 # --- Personal scratch (not published) ---
-POSSIBLE-ADDITIONS.md
+/POSSIBLE-ADDITIONS.md
+*.scratch.md
