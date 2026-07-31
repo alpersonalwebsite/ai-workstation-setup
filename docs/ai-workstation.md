@@ -588,26 +588,16 @@ These are not tools, but they matter more than the tools do.
 
 #### Prompts to fill it
 
-Used by the flows in [Project workflow](#project-workflow):
+Used by the flows in [Project workflow](#project-workflow). The prompt, its
+guardrails (folder-scoped, do not invent, verify counts and IDs, show the diff
+first), and the after-writing accuracy and disclosure skim now live in the
+`/fill-claude-md` skill (`claude/skills/fill-claude-md/SKILL.md`), so filling a
+CLAUDE.md is one command instead of a pasted paragraph:
 
-- **Ongoing project:** at the end of a session, "update CLAUDE.md with what we
-  did and decided." It builds up as you work.
-- **Cold or existing folder:** to populate the fresh template, "Fill in the
-  CLAUDE.md in this folder (the current directory, whether it is the repo root or
-  a subfolder). Do not move it to the repo root. Describe THIS folder: base it on
-  this folder's code and docs, this session, and relevant memory. You may pull
-  context from parent or sibling folders where it helps explain this folder, but
-  keep the file about this folder, not the whole repo. Do not invent. Verify
-  counts and IDs against the files rather than estimating, and mark anything you
-  cannot confirm as unverified. Show the diff before writing." The
-  folder's code is ground truth; the session and memory carry recent decisions
-  and half-done state not yet in the code (on a true cold start, a folder never
-  opened with Claude, the code is the only source with anything in it). Then skim
-  the result for two things: accuracy, and disclosure. The file is committed with
-  the folder, but the session and memory can hold what the repo should not
-  (client names, incident detail, internal hostnames, pasted secrets). A wrong or
-  oversharing CLAUDE.md is worse than a blank one, since it is trusted every
-  session.
+- **Fresh or existing folder:** run `/fill-claude-md` in the folder to populate
+  the template from its code, this session, and relevant memory.
+- **Ongoing project:** run `/fill-claude-md` at the end of a session to fold in
+  what changed. It builds up as you work.
 
 ### One tmux session per project
 
@@ -645,13 +635,18 @@ separate from the shell and display config so it can grow as you add skills.
     unverified statements do not land in durable artifacts. Ready to use as-is:
     manual only, and unable to use the Write or Edit tools (`disallowed-tools`),
     though it can still run shell commands with your approval.
+  - [`fill-claude-md`](../claude/skills/fill-claude-md/) fills or updates a
+    folder-scoped `CLAUDE.md` from the folder's code, the session, and relevant
+    memory, with guardrails (do not invent, verify counts and IDs, show the diff,
+    then skim for accuracy and disclosure). Ready to use as-is: manual only.
 
 To install a skill, fill in any bracketed placeholders first (`writing-voice` is
-a template to complete; `fact-check` is ready as-is), then copy the folder into
-`~/.claude/skills/`. A template copied with its placeholders still matches its
-description, so Claude would load the empty prompts as guidance, which is worse
-than not having the skill at all. Both your `~/.claude/CLAUDE.md` and the skills
-are good candidates for a dotfiles repo so they restore on a new machine.
+a template to complete; `fact-check` and `fill-claude-md` are ready as-is), then
+copy the folder into `~/.claude/skills/`. A template copied with its placeholders
+still matches its description, so Claude would load the empty prompts as
+guidance, which is worse than not having the skill at all. Both your
+`~/.claude/CLAUDE.md` and the skills are good candidates for a dotfiles repo so
+they restore on a new machine.
 
 ## Security notes
 
