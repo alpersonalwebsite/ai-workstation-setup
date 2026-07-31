@@ -363,10 +363,13 @@ brew install --cask lunar
 - **Replaces/changes:** Replaces reaching for the monitor's physical joystick,
   and gives you one brightness control for all displays at once.
 
-Lunar is paid: a **$23 one-time Pro license** unlocks the sync and adaptive modes
-(the free tier is capped at about 100 brightness adjustments a day, enough to try
-it). It is open source (github.com/alin23/Lunar), so its Accessibility usage is
-auditable. Grant it System Settings > Privacy & Security > Accessibility.
+Lunar is paid: a **$23 one-time Pro license** unlocks **Sync Mode**, the adaptive
+modes, and **multi-monitor support**. The free tier does DDC brightness, sub-zero
+dimming, and the brightness keys, capped at about 100 adjustments a day, but
+syncing across displays is Pro-only, so a multi-display setup like this one needs
+the license. It is open source (github.com/alin23/Lunar), so its Accessibility
+usage is auditable, and it needs macOS 12 or later. Grant it System Settings >
+Privacy & Security > Accessibility.
 
 **Free alternative:** [MonitorControl](https://github.com/MonitorControl/MonitorControl)
 (`brew install --cask monitorcontrol`) is free and open source and does the same

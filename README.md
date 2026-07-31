@@ -31,7 +31,7 @@ cd ai-workstation-setup
 # Run ONE of these, not both:
 ./setup.sh            # tmux + plugins + config + fzf + proj/initclaude
 # or
-./setup.sh --apps     # all of the above, plus Rectangle, iTerm2, Lunar
+./setup.sh --apps     # all of the above, plus Rectangle, iTerm2, Lunar (paid; MonitorControl is the free alternative)
 ```
 
 The script is safe to re-run: every step checks before acting, and re-running
