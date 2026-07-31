@@ -588,26 +588,16 @@ These are not tools, but they matter more than the tools do.
 
 #### Prompts to fill it
 
-Used by the flows in [Project workflow](#project-workflow):
+Used by the flows in [Project workflow](#project-workflow). The prompt, its
+guardrails (folder-scoped, do not invent, verify counts and IDs, show the diff
+first), and the after-writing accuracy and disclosure skim now live in the
+`/fill-claude-md` skill (`claude/skills/fill-claude-md/SKILL.md`), so filling a
+CLAUDE.md is one command instead of a pasted paragraph:
 
+- **Fresh or existing folder:** run `/fill-claude-md` in the folder to populate
+  the template from its code, this session, and relevant memory.
 - **Ongoing project:** at the end of a session, "update CLAUDE.md with what we
   did and decided." It builds up as you work.
-- **Cold or existing folder:** to populate the fresh template, "Fill in the
-  CLAUDE.md in this folder (the current directory, whether it is the repo root or
-  a subfolder). Do not move it to the repo root. Describe THIS folder: base it on
-  this folder's code and docs, this session, and relevant memory. You may pull
-  context from parent or sibling folders where it helps explain this folder, but
-  keep the file about this folder, not the whole repo. Do not invent. Verify
-  counts and IDs against the files rather than estimating, and mark anything you
-  cannot confirm as unverified. Show the diff before writing." The
-  folder's code is ground truth; the session and memory carry recent decisions
-  and half-done state not yet in the code (on a true cold start, a folder never
-  opened with Claude, the code is the only source with anything in it). Then skim
-  the result for two things: accuracy, and disclosure. The file is committed with
-  the folder, but the session and memory can hold what the repo should not
-  (client names, incident detail, internal hostnames, pasted secrets). A wrong or
-  oversharing CLAUDE.md is worse than a blank one, since it is trusted every
-  session.
 
 ### One tmux session per project
 
