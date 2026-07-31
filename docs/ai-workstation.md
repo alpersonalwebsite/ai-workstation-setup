@@ -550,6 +550,16 @@ These are not tools, but they matter more than the tools do.
   was done and why. This, more than tmux, is what makes long-running projects
   work.
 
+**Prompts to fill it:**
+
+- **Ongoing project:** at the end of a session, "update CLAUDE.md with what we
+  did and decided." It builds up as you work.
+- **Cold or existing project:** to populate the fresh template from the code,
+  "Read the repo (layout, README, config, recent git history) and fill in
+  CLAUDE.md from what is actually there. Do not invent; mark anything unclear as
+  unverified. Show the diff before writing." Then skim the result: a wrong
+  CLAUDE.md is worse than a blank one, since it is trusted every session.
+
 ### One tmux session per project
 
 - **What it's for:** Each project gets its own session, often with writer and
