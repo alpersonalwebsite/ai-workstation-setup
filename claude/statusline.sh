@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # statusline.sh: Claude Code custom status line (first-party, no network).
-# Copy to ~/.claude/statusline.sh, chmod +x, and set the statusLine key in
+# Runs from ~/.claude/statusline.sh; enable it with the statusLine key in
 # settings.json. Claude Code runs it every turn and pipes session JSON on stdin
 # (https://code.claude.com/docs/en/statusline). It prints, with no third-party
 # code and no outbound request:
