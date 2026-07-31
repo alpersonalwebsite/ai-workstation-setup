@@ -596,8 +596,8 @@ CLAUDE.md is one command instead of a pasted paragraph:
 
 - **Fresh or existing folder:** run `/fill-claude-md` in the folder to populate
   the template from its code, this session, and relevant memory.
-- **Ongoing project:** at the end of a session, "update CLAUDE.md with what we
-  did and decided." It builds up as you work.
+- **Ongoing project:** run `/fill-claude-md` at the end of a session to fold in
+  what changed. It builds up as you work.
 
 ### One tmux session per project
 
@@ -635,9 +635,13 @@ separate from the shell and display config so it can grow as you add skills.
     unverified statements do not land in durable artifacts. Ready to use as-is:
     manual only, and unable to use the Write or Edit tools (`disallowed-tools`),
     though it can still run shell commands with your approval.
+  - [`fill-claude-md`](../claude/skills/fill-claude-md/) fills or updates a
+    folder-scoped `CLAUDE.md` from the folder's code, the session, and relevant
+    memory, with guardrails (do not invent, verify counts and IDs, show the diff,
+    then skim for accuracy and disclosure). Ready to use as-is: manual only.
 
 To install a skill, fill in any bracketed placeholders first (`writing-voice` is
-a template to complete; `fact-check` is ready as-is), then copy the folder into
+a template to complete; `fact-check` and `fill-claude-md` are ready as-is), then copy the folder into
 `~/.claude/skills/`. A template copied with its placeholders still matches its
 description, so Claude would load the empty prompts as guidance, which is worse
 than not having the skill at all. Both your `~/.claude/CLAUDE.md` and the skills
