@@ -188,7 +188,7 @@ A single `Ctrl-C` in Claude only cancels the current action, it does not quit.
 Mnemonic: **`/exit` closes Claude; `exit` closes the session.**
 
 End a work session by updating CLAUDE.md so the next resume starts with full
-context (the exact prompt is under "Prompts to fill it").
+context (the exact prompt is under [Prompts to fill it](#prompts-to-fill-it)).
 
 ### Surviving a restart
 
@@ -549,7 +549,9 @@ These are not tools, but they matter more than the tools do.
   was done and why. This, more than tmux, is what makes long-running projects
   work.
 
-**Prompts to fill it** (the Project workflow steps above point here):
+#### Prompts to fill it
+
+Used by the flows in [Project workflow](#project-workflow):
 
 - **Ongoing project:** at the end of a session, "update CLAUDE.md with what we
   did and decided." It builds up as you work.
