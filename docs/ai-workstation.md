@@ -625,6 +625,11 @@ separate from the shell and display config so it can grow as you add skills.
   anyone working here. Copy it to `~/.claude/CLAUDE.md` and make the rules yours.
   This is the global config, distinct from the
   [per-project `CLAUDE.md`](#a-claudemd-per-project) that `initclaude` scaffolds.
+- [`claude/statusline.sh`](../claude/statusline.sh) is a status-line script:
+  Claude Code runs it every turn and it prints model, context-window use, session
+  cost, and git branch. Copy it to `~/.claude/statusline.sh`, `chmod +x`, and add
+  the `statusLine` key to `settings.json` (see
+  [Cost and usage visibility](#cost-and-usage-visibility)). jq only, no network.
 - [`claude/skills/`](../claude/skills/) holds one folder per skill. Each is a
   `SKILL.md` that Claude invokes when a task matches its description.
   - [`writing-voice`](../claude/skills/writing-voice/) captures your writing
@@ -647,6 +652,45 @@ still matches its description, so Claude would load the empty prompts as
 guidance, which is worse than not having the skill at all. Both your
 `~/.claude/CLAUDE.md` and the skills are good candidates for a dotfiles repo so
 they restore on a new machine.
+
+### Cost and usage visibility
+
+Claude Code charges by token, and there is no `/cost` command, but you can see
+spend with no third-party tool for the common cases:
+
+- **Live:** the status line (`claude/statusline.sh`, above) shows the running
+  session cost and context use every turn. Wire it up in `~/.claude/settings.json`:
+
+  ```json
+  {
+    "statusLine": {
+      "type": "command",
+      "command": "~/.claude/statusline.sh",
+      "padding": 2
+    }
+  }
+  ```
+
+  It reads the session JSON Claude Code pipes on stdin (`model.display_name`,
+  `context_window.used_percentage`, `cost.total_cost_usd`) and needs only `jq`.
+- **Session, day, week:** `/usage`. It shows the session's token use and a
+  locally-estimated cost, and on a subscription plan (Pro, Max, Team, Enterprise)
+  a 24h/7d plan-usage breakdown (press `d` / `w`). On API-key auth you get the
+  session cost figure but no plan bars. The figures come from local session
+  history on this machine only, not other devices or claude.ai.
+- **Month and longer:** not covered natively.
+  [`ccusage`](https://github.com/ccusage/ccusage) (MIT, zero-dependency) reads the
+  same local `~/.claude` logs and aggregates by day, week, month, and session.
+  Install a pinned version and run it `--offline` (embedded pricing, no outbound
+  request) to keep it company-safe:
+
+  ```bash
+  npm i -g ccusage@20.0.19   # current pin; check for a newer release first
+  ccusage monthly --offline
+  ```
+
+The cost figure everywhere is a client-side estimate at list rates, so it does
+not reflect promotional or contracted pricing and is not your bill.
 
 ## Security notes
 
