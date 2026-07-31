@@ -555,11 +555,14 @@ Used by the flows in [Project workflow](#project-workflow):
 
 - **Ongoing project:** at the end of a session, "update CLAUDE.md with what we
   did and decided." It builds up as you work.
-- **Cold or existing project:** to populate the fresh template from the code,
-  "Read the repo (layout, README, config, recent git history) and fill in
-  CLAUDE.md from what is actually there. Do not invent; mark anything unclear as
-  unverified. Show the diff before writing." Then skim the result: a wrong
-  CLAUDE.md is worse than a blank one, since it is trusted every session.
+- **Cold or existing project:** to populate the fresh template, "Fill in
+  CLAUDE.md for this project from the repo (layout, README, config, recent git
+  history), this conversation, and any existing memory or notes. Do not invent;
+  mark anything you cannot confirm as unverified. Show the diff before writing."
+  The repo is ground truth for the stack; the conversation (especially on a
+  resume) carries the recent decisions and half-done state that are not in the
+  code yet; memory carries anything from past sessions. Then skim the result: a
+  wrong CLAUDE.md is worse than a blank one, since it is trusted every session.
 
 ### One tmux session per project
 
