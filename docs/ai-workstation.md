@@ -549,9 +549,19 @@ These are not tools, but they matter more than the tools do.
   was done and why. This, more than tmux, is what makes long-running projects
   work.
 - **Per folder, not per repo:** Claude Code loads `CLAUDE.md` by directory, so
-  the file lives in the folder you work in (where `initclaude` writes it), and
-  they stack: a subfolder's file loads on top of any at the repo root. Keep a
+  the file lives in the folder you work in (where `initclaude` writes it). Keep a
   subfolder file about that component's specifics; do not restate the whole repo.
+  Three behaviors matter (all in the Claude Code memory docs):
+  - **Stacking depends on where you launch.** Launch in the subfolder
+    (`proj <subfolder>`) and its file loads at startup on top of any at the repo
+    root. Launch at the repo root and the subfolder file is on-demand: it loads
+    only when Claude reads a file down there.
+  - **Subfolder files do not survive `/compact`.** A root `CLAUDE.md` is
+    re-injected after compaction; a nested one is not, it reloads only the next
+    time Claude reads a file in that subfolder. In the long sessions this page is
+    built around, a subfolder file can quietly stop applying mid-session.
+  - **Confirm what loaded** with `/context`, then check the list under Memory
+    files. That is the check for "did my CLAUDE.md actually load."
 
 #### Prompts to fill it
 
