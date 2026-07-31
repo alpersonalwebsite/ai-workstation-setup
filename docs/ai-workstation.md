@@ -644,6 +644,15 @@ separate from the shell and display config so it can grow as you add skills.
     folder-scoped `CLAUDE.md` from the folder's code, the session, and relevant
     memory, with guardrails (do not invent, verify counts and IDs, show the diff,
     then skim for accuracy and disclosure). Ready to use as-is: manual only.
+  - [`rca`](../claude/skills/rca/) drafts an incident root-cause analysis in a
+    finding / evidence / fix shape, separating measured from inferred and keeping
+    hosts, clients, and incident detail out of anything committed. Manual only.
+- [`claude/agents/`](../claude/agents/) holds subagents: workers Claude delegates
+  to that run in their own context and return a summary. The one here,
+  [`code-reviewer`](../claude/agents/code-reviewer.md), reviews a diff or PR for
+  real defects (correctness and security first, then your `CLAUDE.md` standards),
+  read-only and enforced with `permissionMode: plan`, on Sonnet. Copy it into
+  `~/.claude/agents/`.
 
 To install a skill, fill in any bracketed placeholders first (`writing-voice` is
 a template to complete; `fact-check` and `fill-claude-md` are ready as-is), then
