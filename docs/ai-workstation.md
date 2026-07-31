@@ -519,8 +519,13 @@ OSD baseline, then nudge Lunar's slider once to write a fresh value.
   hold over a given hub or adapter), Lunar can only lay a dark overlay on top
   rather than lower the real backlight. It still dims and still syncs, but the
   backlight stays at full underneath, so prefer a native connection for real DDC
-  control. If a display you know supports DDC lands on overlay, re-test or force
-  DDC for it in Lunar before settling for the overlay.
+  control. If a display you know supports DDC lands on overlay, open its Lunar
+  settings (the gear icon) and in **Controls** confirm **Hardware (DDC)** is
+  checked; if it still falls back, enable **Try to enforce DDC** and move the
+  slider to confirm the real backlight changes. That enforce toggle is what pulls
+  a monitor on a hub or adapter onto DDC (it took both of my hub-connected Dells
+  off overlay onto hardware control). If enforcing glitches or reverts, uncheck it
+  and keep the overlay.
 
 ### Terminal colors
 
