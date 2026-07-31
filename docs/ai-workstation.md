@@ -548,6 +548,10 @@ These are not tools, but they matter more than the tools do.
 - **Replaces/changes:** Replaces scrolling old chat history to reconstruct what
   was done and why. This, more than tmux, is what makes long-running projects
   work.
+- **Per folder, not per repo:** Claude Code loads `CLAUDE.md` by directory, so
+  the file lives in the folder you work in (where `initclaude` writes it), and
+  they stack: a subfolder's file loads on top of any at the repo root. Keep a
+  subfolder file about that component's specifics; do not restate the whole repo.
 
 #### Prompts to fill it
 
@@ -555,18 +559,21 @@ Used by the flows in [Project workflow](#project-workflow):
 
 - **Ongoing project:** at the end of a session, "update CLAUDE.md with what we
   did and decided." It builds up as you work.
-- **Cold or existing project:** to populate the fresh template, "Fill in
-  CLAUDE.md for this project from the repo (layout, README, config, recent git
-  history), this conversation, and any existing memory or notes. Do not invent;
-  mark anything you cannot confirm as unverified. Show the diff before writing."
-  The repo is ground truth for the stack; the conversation and memory carry
-  recent decisions and half-done state not yet in the code (on a true cold start,
-  a repo never opened with Claude, the repo is the only source with anything in
-  it). Then skim the result for two things: accuracy, and disclosure. CLAUDE.md
-  lands at the repo root and is normally committed, but conversations and memory
-  can hold what the repo should not (client names, incident detail, internal
-  hostnames, pasted secrets). A wrong or oversharing CLAUDE.md is worse than a
-  blank one, since it is trusted every session.
+- **Cold or existing folder:** to populate the fresh template, "Fill in the
+  CLAUDE.md in this folder (the current directory, whether it is the repo root or
+  a subfolder). Do not move it to the repo root. Describe THIS folder: base it on
+  this folder's code and docs, this session, and relevant memory. You may pull
+  context from parent or sibling folders where it helps explain this folder, but
+  keep the file about this folder, not the whole repo. Do not invent; mark
+  anything you cannot confirm as unverified. Show the diff before writing." The
+  folder's code is ground truth; the session and memory carry recent decisions
+  and half-done state not yet in the code (on a true cold start, a folder never
+  opened with Claude, the code is the only source with anything in it). Then skim
+  the result for two things: accuracy, and disclosure. The file is committed with
+  the folder, but the session and memory can hold what the repo should not
+  (client names, incident detail, internal hostnames, pasted secrets). A wrong or
+  oversharing CLAUDE.md is worse than a blank one, since it is trusted every
+  session.
 
 ### One tmux session per project
 
