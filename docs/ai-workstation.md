@@ -349,31 +349,45 @@ going down the keyboard goes down the screen. Columns and side rows are all
 display-pinned, so one keystroke both moves the window to the right monitor and
 sizes it.
 
-### [MonitorControl](https://github.com/MonitorControl/MonitorControl)
+### [Lunar](https://lunar.fyi/)
 
 ```bash
-brew install --cask monitorcontrol
+brew install --cask lunar
 ```
 
-- **What it's for:** Control external monitor brightness from the keyboard.
-  macOS brightness keys do not drive most non-Apple external monitors on their
-  own; this uses DDC/CI to do it.
-- **Replaces/changes:** Replaces reaching for the monitor's physical joystick.
+- **What it's for:** Control external monitor brightness (plus volume and
+  contrast) from the keyboard, and sync brightness across every display from one
+  source. macOS brightness keys do not drive most non-Apple external monitors on
+  their own; Lunar uses DDC/CI to do it, and falls back to a software overlay
+  where DDC is unavailable.
+- **Replaces/changes:** Replaces reaching for the monitor's physical joystick,
+  and gives you one brightness control for all displays at once.
 
-Grant it System Settings > Privacy & Security > Accessibility.
+Lunar is paid: a **$23 one-time Pro license** unlocks the sync and adaptive modes
+(the free tier is capped at about 100 brightness adjustments a day, enough to try
+it). It is open source (github.com/alin23/Lunar), so its Accessibility usage is
+auditable. Grant it System Settings > Privacy & Security > Accessibility.
 
-How well it works depends on the connection, and it is worth treating as
+**Free alternative:** [MonitorControl](https://github.com/MonitorControl/MonitorControl)
+(`brew install --cask monitorcontrol`) is free and open source and does the same
+DDC brightness control, but its cross-display **brightness sync is flaky**,
+especially after sleep or opening/closing the lid, and it has no adaptive
+(ambient, location, or sensor) modes. If you only want per-monitor brightness on
+the keyboard, it is a fine free pick. For one control that drives every display
+together, Lunar is the better tool.
+
+How well DDC works depends on the connection, and it is worth treating as
 something to test rather than assume:
 
 - **DisplayPort, or USB-C in DP Alt Mode:** usually works, but not always. DDC
   support varies by monitor, by cable, and sometimes by which input you use on
-  the same monitor. If brightness keys do nothing, try the other input before
-  concluding the app is broken.
+  the same monitor. If a display will not take brightness commands, try its other
+  input before concluding the app is broken.
 - **Through a DisplayLink dock:** does not work. DDC does not pass through, so
-  monitors on a dock still need their physical buttons.
+  monitors on a dock fall back to overlay dimming or need their physical buttons.
 
-If it does not work for a given display, that is usually the monitor or the
-link, not MonitorControl.
+If DDC does not work for a given display, that is usually the monitor or the
+link, not the app.
 
 ### [displayplacer](https://github.com/jakehilborn/displayplacer)
 
@@ -448,16 +462,14 @@ schedule keep it easy on the eyes.
 
 **Match brightness to the room.** An external monitor has no ambient sensor, so
 it sits at one brightness all day. Bridge that with the built-in sensor: turn on
-macOS **Automatically adjust brightness** for the laptop display, and in
-[MonitorControl](#monitorcontrol) enable **Sync brightness changes from Built-in
-and Apple displays** so the external follows it. Also turn on **Combine hardware
-and software dimming** (dims below the panel's hardware floor for a dark room,
-and sidesteps the PWM backlight flicker some panels show at low brightness),
-**Enable smooth brightness transitions**, and **Assume last saved settings are valid**
-so the level survives a restart or wake. That last one is reported flaky on macOS
-Sequoia (MonitorControl 4.3.x), so confirm the brightness actually comes back
-after a reboot. Rule of thumb: a white page should look like paper under the room
-light, not a lightbulb.
+macOS **Automatically adjust brightness** for the laptop display, and run
+[Lunar](#lunar) in **Sync Mode** with the built-in as the **sync source** and
+every external as a **sync target**, so they all follow the laptop's ambient
+sensor from one place. Turn on **sub-zero dimming** for the displays you drive
+over DDC (dims below the panel's hardware floor for a dark room, and sidesteps
+the PWM backlight flicker some panels show at low brightness). Lunar restores the
+levels across restart and wake, so confirm they come back after a reboot. Rule of
+thumb: a white page should look like paper under the room light, not a lightbulb.
 
 **Warm it in the evening.** Turn on macOS **Night Shift** and set the schedule to
 **Sunset to Sunrise**, which enables it automatically each evening (the "Turn On
@@ -477,35 +489,38 @@ changes (the brightness pumping is fatiguing). Its name varies by model: older
 Samsungs have **Dynamic Contrast**, QLED/HDR ones like the ViewFinity S9 have
 **Local Dimming** instead, so turn off whichever your menu actually shows. Keep
 the input at its full refresh rate. The Eye Care menu also carries **Adaptive
-Picture** (leave off: it auto-drives brightness and fights MonitorControl) and
+Picture** (leave off: it auto-drives brightness and fights Lunar) and
 **Eye Saver Mode** (leave off if you use Night Shift, or you double-warm).
 
-**Keep one source of truth for brightness.** Drive it from MonitorControl, not
-the monitor's buttons. If the OSD brightness and MonitorControl disagree (for
-example a level set in the OSD at first setup), the panel and the slider drift
-apart, worst with "Assume last saved settings are valid" trusting a stale cache.
-Resetting the monitor to factory defaults clears the manual value on the panel,
-but MonitorControl keeps its own cached brightness and can reapply it on startup
-or wake. So after a reset, resync MonitorControl too: nudge its brightness slider
-to write a fresh value, or toggle "Assume last saved settings are valid" off and back
-on. Then MonitorControl is the single authority again.
+**Keep one source of truth for brightness.** Drive it from Lunar, not the
+monitor's buttons. Watch for the trap where a display looks dark but the app says
+it is at full: that is almost always the monitor's own **OSD brightness set low,
+even 0**, which the app cannot see past. Check the physical OSD brightness first
+and set a sane baseline, then let Lunar be the day-to-day control. On a display
+driven over DDC, Lunar sets the real backlight and its value is the authority; on
+an overlay-only display Lunar just darkens on top, so the panel's own OSD
+brightness still sets the ceiling. If the OSD and the app drift apart, reset the
+OSD baseline, then nudge Lunar's slider once to write a fresh value.
 
-**How MonitorControl controls each display (shown as its Control method):**
+**How Lunar controls each display (shown as its Control method):**
 
-- **Hardware (Apple):** the built-in display, driven by macOS directly. Nothing
-  to configure.
-- **Hardware control (DDC):** a monitor on a native connection that carries DDC/CI
+- **Apple native:** the built-in display (and any Apple external), driven by
+  macOS directly. This is Lunar's ideal **sync source**, it carries the ambient
+  sensor.
+- **Hardware (DDC):** a monitor on a native connection that carries DDC/CI
   (DisplayPort, HDMI, or USB-C straight to the Mac, not through a DisplayLink
   dock). One exception: the built-in HDMI port on M1 Macs and the entry-level M2
   Mac mini carries no DDC even connected directly, so use USB-C or DisplayPort
-  there. MonitorControl adjusts the real backlight, and its "combine hardware and
-  software dimming" range extends below the panel's floor. This is what you want
-  for the screen you look at most.
-- **Software (shade)**, shown with a warning icon: a DisplayLink (dock) monitor
-  appears as a "virtual display" and does not pass DDC, so MonitorControl can
-  only dim it with an overlay, not the real backlight. That is a fallback, so set
-  those monitors' brightness with their own buttons instead (or connect them
-  natively, off the dock, to get hardware control over DDC).
+  there. Lunar adjusts the real backlight, and **sub-zero dimming** extends the
+  range below the panel's floor. This is what you want for the screen you look at
+  most.
+- **Overlay (software) dimming**, Lunar's fallback: when a display does not pass
+  DDC (a DisplayLink dock monitor shows as a "virtual display," or DDC will not
+  hold over a given hub or adapter), Lunar can only lay a dark overlay on top
+  rather than lower the real backlight. It still dims and still syncs, but the
+  backlight stays at full underneath, so prefer a native connection for real DDC
+  control. If a display you know supports DDC lands on overlay, re-test or force
+  DDC for it in Lunar before settling for the overlay.
 
 ### Terminal colors
 
