@@ -20,7 +20,7 @@
 #
 # Usage:
 #   ./setup.sh                 # core: tmux + plugins + config + fzf + proj
-#   ./setup.sh --apps          # also install Rectangle, iTerm2, MonitorControl
+#   ./setup.sh --apps          # also install Rectangle, iTerm2, Lunar
 #   ./setup.sh --assume-yes    # never prompt (for unattended/CI runs)
 #
 set -euo pipefail
@@ -276,8 +276,8 @@ if $INSTALL_APPS; then
   brew list --cask rectangle >/dev/null 2>&1 || brew install --cask rectangle
   log "Installing iTerm2"
   brew list --cask iterm2 >/dev/null 2>&1 || brew install --cask iterm2
-  log "Installing MonitorControl (brightness/volume for external monitors via DDC)"
-  brew list --cask monitorcontrol >/dev/null 2>&1 || brew install --cask monitorcontrol
+  log "Installing Lunar (brightness sync across displays via DDC; Pro is paid, MonitorControl is a free alternative)"
+  brew list --cask lunar >/dev/null 2>&1 || brew install --cask lunar
 fi
 
 log "Done."
@@ -288,4 +288,4 @@ echo "  - Detach (keep alive):   Ctrl-b d"
 echo "  - Reattach later:        tmux attach"
 echo "  - After a reboot, run 'claude --resume' in each restored pane."
 echo "  - Open a new terminal (or 'source ~/.zshrc') to pick up proj/initclaude."
-$INSTALL_APPS || echo "  - Re-run with --apps to also install Rectangle, iTerm2, MonitorControl."
+$INSTALL_APPS || echo "  - Re-run with --apps to also install Rectangle, iTerm2, Lunar."
