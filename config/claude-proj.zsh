@@ -108,5 +108,5 @@ EOF
     print -u2 "❌ Could not write $target."
     return 1
   fi
-  print "✅ Wrote $target. Fill in the blanks, or ask Claude: \"fill in CLAUDE.md from the codebase\"."
+  print "✅ Wrote $target. Fill in the blanks, or have Claude fill it in from the codebase."
 }

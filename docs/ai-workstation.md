@@ -139,7 +139,7 @@ claude              # start Claude inside it — now persistent
 ```bash
 proj ~/Documents/that-old-project   # cd + create/attach this folder's tmux session
 initclaude                          # scaffold CLAUDE.md (refuses if one exists)
-claude                              # then ask: "fill in CLAUDE.md from the codebase"
+claude                              # then have Claude fill it in (see "Prompts to fill it")
 ```
 
 Use `proj <dir>` with the path, not bare `proj`: bare `proj` fuzzy-picks from
@@ -187,8 +187,8 @@ does.
 A single `Ctrl-C` in Claude only cancels the current action, it does not quit.
 Mnemonic: **`/exit` closes Claude; `exit` closes the session.**
 
-End a work session with "update CLAUDE.md with what we did" so the next resume
-starts with full context.
+End a work session by updating CLAUDE.md so the next resume starts with full
+context (the exact prompt is under [Prompts to fill it](#prompts-to-fill-it)).
 
 ### Surviving a restart
 
@@ -544,11 +544,22 @@ These are not tools, but they matter more than the tools do.
 
 - **What it's for:** A memory file the assistant loads automatically every
   session, holding decisions, current state, and TODOs. Update it at the end of
-  a session ("update CLAUDE.md with what we did and decided") and the project is
-  still resumable three weeks later.
+  a session (prompt below) and the project is still resumable three weeks later.
 - **Replaces/changes:** Replaces scrolling old chat history to reconstruct what
   was done and why. This, more than tmux, is what makes long-running projects
   work.
+
+#### Prompts to fill it
+
+Used by the flows in [Project workflow](#project-workflow):
+
+- **Ongoing project:** at the end of a session, "update CLAUDE.md with what we
+  did and decided." It builds up as you work.
+- **Cold or existing project:** to populate the fresh template from the code,
+  "Read the repo (layout, README, config, recent git history) and fill in
+  CLAUDE.md from what is actually there. Do not invent; mark anything unclear as
+  unverified. Show the diff before writing." Then skim the result: a wrong
+  CLAUDE.md is worse than a blank one, since it is trusted every session.
 
 ### One tmux session per project
 
