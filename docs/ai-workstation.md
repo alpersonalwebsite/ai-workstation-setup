@@ -575,8 +575,8 @@ Used by the flows in [Project workflow](#project-workflow):
   this folder's code and docs, this session, and relevant memory. You may pull
   context from parent or sibling folders where it helps explain this folder, but
   keep the file about this folder, not the whole repo. Do not invent. Verify
-  every count and ID against the files rather than estimating; mark anything else
-  you cannot confirm as unverified. Show the diff before writing." The
+  counts and IDs against the files rather than estimating, and mark anything you
+  cannot confirm as unverified. Show the diff before writing." The
   folder's code is ground truth; the session and memory carry recent decisions
   and half-done state not yet in the code (on a true cold start, a folder never
   opened with Claude, the code is the only source with anything in it). Then skim
