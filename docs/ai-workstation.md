@@ -146,8 +146,8 @@ Use `proj <dir>` with the path, not bare `proj`: bare `proj` fuzzy-picks from
 projects you have already opened, and a repo never opened with Claude is not in
 that list. `initclaude` never overwrites an existing `CLAUDE.md`; it refuses and
 exits non-zero, so it is safe to run on any repo. For an older project with real
-code, it is easier to let Claude populate the template from the actual code than
-to fill it in by hand.
+code, it is easier to let Claude populate the template (see
+[Prompts to fill it](#prompts-to-fill-it)) than to fill it in by hand.
 
 **Resume a project:**
 
@@ -559,10 +559,14 @@ Used by the flows in [Project workflow](#project-workflow):
   CLAUDE.md for this project from the repo (layout, README, config, recent git
   history), this conversation, and any existing memory or notes. Do not invent;
   mark anything you cannot confirm as unverified. Show the diff before writing."
-  The repo is ground truth for the stack; the conversation (especially on a
-  resume) carries the recent decisions and half-done state that are not in the
-  code yet; memory carries anything from past sessions. Then skim the result: a
-  wrong CLAUDE.md is worse than a blank one, since it is trusted every session.
+  The repo is ground truth for the stack; the conversation and memory carry
+  recent decisions and half-done state not yet in the code (on a true cold start,
+  a repo never opened with Claude, the repo is the only source with anything in
+  it). Then skim the result for two things: accuracy, and disclosure. CLAUDE.md
+  lands at the repo root and is normally committed, but conversations and memory
+  can hold what the repo should not (client names, incident detail, internal
+  hostnames, pasted secrets). A wrong or oversharing CLAUDE.md is worse than a
+  blank one, since it is trusted every session.
 
 ### One tmux session per project
 
