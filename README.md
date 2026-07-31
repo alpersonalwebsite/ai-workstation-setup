@@ -23,7 +23,7 @@ This is a personal collection rather than a framework. Take what is useful.
 | [`claude/CLAUDE.example.md`](claude/CLAUDE.example.md) | Template global instructions for Claude Code (copy to `~/.claude/CLAUDE.md`) |
 | [`claude/skills/`](claude/skills/) | Claude Code skills, one folder each (e.g. `writing-voice`) |
 | [`claude/statusline.sh`](claude/statusline.sh) | Status-line script (model, context use, session cost, branch); copy to `~/.claude/statusline.sh` |
-| [`claude/agents/`](claude/agents/) | Claude Code subagents (e.g. `code-reviewer`: read-only diff/PR review); copy to `~/.claude/agents/` |
+| [`claude/agents/`](claude/agents/) | Claude Code subagents (e.g. `code-reviewer`: diff/PR review, read-only for writes, `Bash`/`WebFetch` still active, see docs); copy to `~/.claude/agents/` |
 
 ## Quick start (macOS)
 

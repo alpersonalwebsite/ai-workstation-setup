@@ -651,7 +651,12 @@ separate from the shell and display config so it can grow as you add skills.
   to that run in their own context and return a summary. The one here,
   [`code-reviewer`](../claude/agents/code-reviewer.md), reviews a diff or PR for
   real defects (correctness and security first, then your `CLAUDE.md` standards),
-  read-only and enforced with `permissionMode: plan`, on Sonnet. Copy it into
+  on Sonnet. It is read-only for writes, enforced by `permissionMode: plan`, but
+  that gates writes, not egress: `Bash` and `WebFetch` stay active, so an injected
+  instruction in an untrusted diff could try to exfiltrate through a fetch. The
+  gate there is `WebFetch`'s per-domain approval prompt (it is not pre-approved),
+  so when reviewing an untrusted PR, check the domain before approving a fetch and
+  do not run it from a permission-bypassing session. Copy it into
   `~/.claude/agents/`.
 
 To install a skill, fill in any bracketed placeholders first (`writing-voice` is
