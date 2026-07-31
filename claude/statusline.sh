@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 #
 # statusline.sh: Claude Code custom status line (first-party, no network).
-# Installed to ~/.claude/statusline.sh via Stow from dotfiles.
-# Canonical source: alpersonalwebsite/dotfiles, claude/.claude/statusline.sh
-#
-# Claude Code runs this every turn and pipes session JSON on stdin
+# Copy to ~/.claude/statusline.sh, chmod +x, and set the statusLine key in
+# settings.json. Claude Code runs it every turn and pipes session JSON on stdin
 # (https://code.claude.com/docs/en/statusline). It prints, with no third-party
 # code and no outbound request:
 #     [<model>]  ctx <N>%  $<session-cost>   ⎇ <git-branch>

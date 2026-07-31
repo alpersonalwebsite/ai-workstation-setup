@@ -685,7 +685,7 @@ spend with no third-party tool for the common cases:
   request) to keep it company-safe:
 
   ```bash
-  npm i -g ccusage@<version>
+  npm i -g ccusage@20.0.19   # current pin; check for a newer release first
   ccusage monthly --offline
   ```
 
