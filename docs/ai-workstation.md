@@ -641,11 +641,12 @@ separate from the shell and display config so it can grow as you add skills.
     then skim for accuracy and disclosure). Ready to use as-is: manual only.
 
 To install a skill, fill in any bracketed placeholders first (`writing-voice` is
-a template to complete; `fact-check` and `fill-claude-md` are ready as-is), then copy the folder into
-`~/.claude/skills/`. A template copied with its placeholders still matches its
-description, so Claude would load the empty prompts as guidance, which is worse
-than not having the skill at all. Both your `~/.claude/CLAUDE.md` and the skills
-are good candidates for a dotfiles repo so they restore on a new machine.
+a template to complete; `fact-check` and `fill-claude-md` are ready as-is), then
+copy the folder into `~/.claude/skills/`. A template copied with its placeholders
+still matches its description, so Claude would load the empty prompts as
+guidance, which is worse than not having the skill at all. Both your
+`~/.claude/CLAUDE.md` and the skills are good candidates for a dotfiles repo so
+they restore on a new machine.
 
 ## Security notes
 
