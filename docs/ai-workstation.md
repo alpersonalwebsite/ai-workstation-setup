@@ -557,7 +557,7 @@ These are not tools, but they matter more than the tools do.
     root. Launch at the repo root and the subfolder file is on-demand: it loads
     only when Claude reads a file down there.
   - **Subfolder files do not survive `/compact`.** A root `CLAUDE.md` is
-    re-injected after compaction; a nested one is not, it reloads only the next
+    re-injected after compaction; a nested one is not. It reloads only the next
     time Claude reads a file in that subfolder. In the long sessions this page is
     built around, a subfolder file can quietly stop applying mid-session.
   - **Confirm what loaded** with `/context`, then check the list under Memory
