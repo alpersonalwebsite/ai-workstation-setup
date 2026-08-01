@@ -474,6 +474,19 @@ the PWM backlight flicker some panels show at low brightness). Lunar restores th
 levels across restart and wake, so confirm they come back after a reboot. Rule of
 thumb: a white page should look like paper under the room light, not a lightbulb.
 
+**Sync Mode and a closed lid.** Sync Mode's source is the built-in display, so
+running the laptop lid-closed (clamshell) breaks it: the built-in turns off, and
+Sync can drag an external toward that now-absent source, writing a low brightness
+over DDC. The panel then looks dark with a film-like cast and stays dark even
+after you quit Lunar, because the low value is already written to the monitor (a
+quick way to tell this apart from a live software overlay: quit Lunar; if nothing
+changes, the darkness is a written brightness value, not an overlay). If you work
+clamshell, set that external to **Manual** in Lunar rather than a sync target, and
+raise its brightness once. Separately, some monitors reset their own OSD
+brightness on the signal change a lid-close triggers; if yours comes back dark,
+raise the OSD brightness and turn off the monitor's Eco or auto-brightness so it
+stops reverting.
+
 **Warm it in the evening.** Turn on macOS **Night Shift** and set the schedule to
 **Sunset to Sunrise**, which enables it automatically each evening (the "Turn On
 Until Sunrise" button is only a manual start-now and is not needed once the
