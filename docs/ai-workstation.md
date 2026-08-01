@@ -573,6 +573,38 @@ This pairs with the screen and lighting settings above: the terminal's dark
 background is most of the screen's light output, so matching screen brightness to
 the room is what keeps the whole picture comfortable.
 
+### Dark mode across apps and the web
+
+The terminal palette above is one app; the wider goal is to shrink the luminance
+jump between a dark terminal or editor and a bright app, and to keep the screen
+close to the room's brightness. Constantly swinging from near-black to white makes
+your pupils re-adapt over and over. It is a comfort and fatigue question, not eye
+damage, and matching polarity across apps reduces it.
+
+- **macOS Dark mode** (System Settings > Appearance > Dark) flips native apps and
+  the browser's own UI in one switch. The biggest consistency win for the least
+  effort.
+- **A browser's dark mode darkens the browser, not the page.** A site's content
+  goes dark only if the site ships a dark theme and follows the OS
+  `prefers-color-scheme` signal. Many (Gmail among them) stay white by default, so
+  seeing white pages under system Dark mode is expected, not a bug.
+- **Prefer each app's own dark theme, per app.** Where an app or site ships a
+  dark theme, use that: macOS apps follow system Dark mode, and web apps set it
+  themselves (Gmail: Settings > Theme > Dark, and so on). Native per-app themes
+  render correctly and add no permissions, so this is the right default, and on a
+  work machine it avoids granting an all-sites extension access to every page. For
+  apps with no dark option, fall back to an extension like Dark Reader (per-site
+  on and off) or Chrome's experimental `chrome://flags` Auto Dark Mode (force-darks
+  every page, but often renders badly). Either way, leave reading-heavy pages
+  light: long-form text is often more legible in light mode, and light on black
+  can smear (halation), worse with astigmatism.
+- **Keep the terminal a soft dark, not pure black** (see [Terminal
+  colors](#terminal-colors)), so the jump to a light app is smaller to begin with.
+
+The larger lever than polarity is still matching screen brightness to the room
+(see [Screen brightness and blue light](#screen-brightness-and-blue-light)): a
+white page strains most when the screen is much brighter than the space around it.
+
 ## Habits
 
 These are not tools, but they matter more than the tools do.
