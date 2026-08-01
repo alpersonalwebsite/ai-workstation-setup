@@ -588,13 +588,16 @@ damage, and matching polarity across apps reduces it.
   goes dark only if the site ships a dark theme and follows the OS
   `prefers-color-scheme` signal. Many (Gmail among them) stay white by default, so
   seeing white pages under system Dark mode is expected, not a bug.
-- **Darken selectively; do not force every site dark.** Set a site's own dark
-  theme where it has one (Gmail: Settings > Theme), force-dark the ones you stare
-  at with an extension like Dark Reader (per-site on and off), and leave
-  reading-heavy pages light: long-form text is often more legible in light mode,
-  and light on black can smear (halation), worse with astigmatism. Chrome's
-  experimental `chrome://flags` Auto Dark Mode force-darks everything but often
-  renders badly.
+- **Prefer each app's own dark theme, per app.** Where an app or site ships a
+  dark theme, use that: macOS apps follow system Dark mode, and web apps set it
+  themselves (Gmail: Settings > Theme > Dark, and so on). Native per-app themes
+  render correctly and add no permissions, so this is the right default, and on a
+  work machine it avoids granting an all-sites extension access to every page. For
+  apps with no dark option, fall back to an extension like Dark Reader (per-site
+  on and off) or Chrome's experimental `chrome://flags` Auto Dark Mode (force-darks
+  every page, but often renders badly). Either way, leave reading-heavy pages
+  light: long-form text is often more legible in light mode, and light on black
+  can smear (halation), worse with astigmatism.
 - **Keep the terminal a soft dark, not pure black** (see [Terminal
   colors](#terminal-colors)), so the jump to a light app is smaller to begin with.
 
