@@ -759,10 +759,13 @@ personal one) works by giving the second account its own config directory via th
 `CLAUDE_CONFIG_DIR` environment variable. Each config dir keeps its own
 credentials, so the logins do not clobber each other. On macOS the second
 account's credential lands in a separate login-keychain item, and that isolation
-is what makes this work. Note up front: the CLI commands and the
-`ANTHROPIC_API_KEY` precedence below are documented, but running two accounts this
-way, and the per-config-dir keychain isolation on macOS, are **observed, not
-documented**, so treat them as version-dependent (re-check after upgrades).
+is what makes this work. Note up front what is and is not documented: the auth CLI
+commands and the `ANTHROPIC_API_KEY` precedence below are documented, but
+**`CLAUDE_CONFIG_DIR`** is the fragile dependency the whole thing rests on. The
+docs mention it only for where credentials live on Linux and Windows, not for
+relocating a full second config, and the per-config-dir **keychain isolation on
+macOS** is not documented either. Both are **observed on a working setup, not
+promised**, so re-check them after upgrades.
 
 1. **Create the config dir.**
    ```bash
@@ -778,6 +781,9 @@ documented**, so treat them as version-dependent (re-check after upgrades).
      ln -sfn "$HOME/.claude/$f" "$f"
    done
    ```
+   If your `~/.claude` config is itself symlinked from a dotfiles repo, point these
+   at the dotfiles source directly to avoid a two-hop chain through `~/.claude`;
+   either resolves the same.
 3. **(Optional) Share sessions and memory.** Link `projects/` (session transcripts
    and auto-memory) and `file-history/` so both accounts see the same history. Do
    this **before** first launching the second account, or it creates real dirs
@@ -791,11 +797,15 @@ documented**, so treat them as version-dependent (re-check after upgrades).
    logins. Across a **work** seat and a **personal** one that leaks each org's
    context into the other; in that case skip this step and let the second account
    keep its own history.
-4. **Add a shell wrapper** to `~/.zshrc`:
+4. **Add a shell wrapper.** The repo keeps shell helpers like `proj` and
+   `initclaude` in the tracked `config/claude-proj.zsh` (installed by `setup.sh`);
+   put this wrapper there too so it restores on a new machine, rather than dropping
+   it in an untracked `~/.zshrc`:
    ```bash
    claude-extension() { CLAUDE_CONFIG_DIR="$HOME/.claude-extension" claude "$@"; }
    ```
-   Then `source ~/.zshrc`. Use an **absolute path** (`$HOME/...` expands to one);
+   Open a new shell (or re-source your zsh config) to pick it up. Use an
+   **absolute path** (`$HOME/...` expands to one);
    do not pass a literal quoted `"~/..."`. The raw string is hashed into the
    keychain service name, so an inconsistent value across shells points at a
    different keychain item and forces a re-login.
