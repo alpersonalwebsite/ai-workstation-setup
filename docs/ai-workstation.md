@@ -752,6 +752,95 @@ spend with no third-party tool for the common cases:
 The cost figure everywhere is a client-side estimate at list rates, so it does
 not reflect promotional or contracted pricing and is not your bill.
 
+## A second Claude Code account, side by side
+
+Running two Claude Code accounts at once (two seats, or a work login and a
+personal one) works by giving the second account its own config directory via the
+`CLAUDE_CONFIG_DIR` environment variable. Each config dir keeps its own
+credentials, so the logins do not clobber each other. On macOS the second
+account's credential lands in a separate login-keychain item, and that isolation
+is what makes this work. Note up front: the CLI commands and the
+`ANTHROPIC_API_KEY` precedence below are documented, but running two accounts this
+way, and the per-config-dir keychain isolation on macOS, are **observed, not
+documented**, so treat them as version-dependent (re-check after upgrades).
+
+1. **Create the config dir.**
+   ```bash
+   mkdir -p "$HOME/.claude-extension"
+   ```
+2. **Link your existing config in.** A fresh config dir is empty, so none of your
+   CLAUDE.md, settings, skills, hooks, or agents apply until you link them. Point
+   each at your primary `~/.claude` config (adjust the list to what you actually
+   have):
+   ```bash
+   cd "$HOME/.claude-extension"
+   for f in CLAUDE.md settings.json agents hooks skills statusline.sh; do
+     ln -sfn "$HOME/.claude/$f" "$f"
+   done
+   ```
+3. **(Optional) Share sessions and memory.** Link `projects/` (session transcripts
+   and auto-memory) and `file-history/` so both accounts see the same history. Do
+   this **before** first launching the second account, or it creates real dirs
+   there and the link fails:
+   ```bash
+   ln -sfn "$HOME/.claude/projects"     "$HOME/.claude-extension/projects"
+   ln -sfn "$HOME/.claude/file-history" "$HOME/.claude-extension/file-history"
+   ```
+   **Only if both accounts are yours, in the same trust boundary.** Sharing
+   `projects/` shares every session transcript and all auto-memory across both
+   logins. Across a **work** seat and a **personal** one that leaks each org's
+   context into the other; in that case skip this step and let the second account
+   keep its own history.
+4. **Add a shell wrapper** to `~/.zshrc`:
+   ```bash
+   claude-extension() { CLAUDE_CONFIG_DIR="$HOME/.claude-extension" claude "$@"; }
+   ```
+   Then `source ~/.zshrc`. Use an **absolute path** (`$HOME/...` expands to one);
+   do not pass a literal quoted `"~/..."`. The raw string is hashed into the
+   keychain service name, so an inconsistent value across shells points at a
+   different keychain item and forces a re-login.
+5. **Log in the second account.**
+   ```bash
+   claude-extension auth login
+   ```
+   Browser flow. Your existing `~/.claude` login is untouched: it uses the
+   keychain item `Claude Code-credentials`, while this one uses
+   `Claude Code-credentials-<hash>`, where `<hash>` is the first eight hex digits
+   of the sha256 of the config dir's absolute path. Compute yours:
+   ```bash
+   printf '%s' "$HOME/.claude-extension" | shasum -a 256 | cut -c1-8
+   ```
+6. **Verify both are live.**
+   ```bash
+   claude auth status              # account A
+   claude-extension auth status    # account B, a different email
+   ```
+   Both should report logged in with different emails. To confirm the two keychain
+   items coexist (attributes only, no secret printed):
+   ```bash
+   security find-generic-password -s "Claude Code-credentials"
+   security find-generic-password -s "Claude Code-credentials-<hash>"
+   ```
+7. **Use them together**, from the same project in two terminals:
+   ```bash
+   claude              # account A
+   claude-extension    # account B, at the same time
+   ```
+
+**Gotchas**
+
+| Issue | Detail |
+|---|---|
+| `ANTHROPIC_API_KEY` | If it is set in your environment it takes precedence over the seat login (documented precedence), so **both** accounts fall back to `authMethod: api_key` and the split does nothing. `unset ANTHROPIC_API_KEY`, and remove it from your shell profile, if `claude auth status` shows `api_key`. |
+| Trust dialog | `.claude.json` is per config dir, so the second account re-accepts the trust prompt and rebuilds its own allowed-tools, one prompt per project. |
+| Same session in both | If you shared `projects/`, do not resume the same session id from both accounts at once: two processes appending one `.jsonl` interleave and corrupt it. Different sessions in the same project are fine. |
+| `history.jsonl` | Up-arrow prompt history, and it spans all projects, so link it only if you accept sharing every project's prompt history across accounts. |
+
+If the isolation ever breaks after an upgrade (one login replacing the other),
+`claude auth status` on each wrapper is how you catch it. For a scripted or CI
+login instead of the browser flow, `claude setup-token` prints an OAuth token you
+set as `CLAUDE_CODE_OAUTH_TOKEN`.
+
 ## Security notes
 
 - tmux runs locally. TPM only uses the network to download plugin code when you
