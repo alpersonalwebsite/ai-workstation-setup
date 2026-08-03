@@ -822,14 +822,16 @@ promised**, so re-check them after upgrades.
    ```
 6. **Verify both are live.**
    ```bash
-   claude auth status              # account A
-   claude-extension auth status    # account B, a different email
+   claude auth status --text            # account A
+   claude-extension auth status --text  # account B, a different email
    ```
-   Both should report logged in with different emails. To confirm the two keychain
-   items coexist (attributes only, no secret printed):
+   Both should report logged in (`claude.ai`, not `api_key`) with different
+   emails. To confirm the two keychain items coexist (attributes only, no secret
+   printed), reuse the computed hash so the lookup is copy-paste runnable:
    ```bash
+   hash=$(printf '%s' "$HOME/.claude-extension" | shasum -a 256 | cut -c1-8)
    security find-generic-password -s "Claude Code-credentials"
-   security find-generic-password -s "Claude Code-credentials-<hash>"
+   security find-generic-password -s "Claude Code-credentials-$hash"
    ```
 7. **Use them together**, from the same project in two terminals:
    ```bash
@@ -841,7 +843,7 @@ promised**, so re-check them after upgrades.
 
 | Issue | Detail |
 |---|---|
-| `ANTHROPIC_API_KEY` | If it is set in your environment it takes precedence over the seat login (documented precedence), so **both** accounts fall back to `authMethod: api_key` and the split does nothing. `unset ANTHROPIC_API_KEY`, and remove it from your shell profile, if `claude auth status` shows `api_key`. |
+| Auth env vars | `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, and `CLAUDE_CODE_OAUTH_TOKEN` each take precedence over the seat login (documented order), so if any is set, in your shell **or** in the shared `settings.json` `env` block, **both** accounts use it and the split does nothing. Keep them out of the shared `settings.json`, and check non-destructively with `env -u ANTHROPIC_API_KEY claude auth status --text` (expect `claude.ai`, not `api_key`). |
 | Trust dialog | `.claude.json` is per config dir, so the second account re-accepts the trust prompt and rebuilds its own allowed-tools, one prompt per project. |
 | Same session in both | If you shared `projects/`, do not resume the same session id from both accounts at once: two processes appending one `.jsonl` interleave and corrupt it. Different sessions in the same project are fine. |
 | `history.jsonl` | Up-arrow prompt history, and it spans all projects, so link it only if you accept sharing every project's prompt history across accounts. |
