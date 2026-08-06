@@ -22,7 +22,8 @@ resumable, which is the point of everything below.
 ```json
 {
   "cleanupPeriodDays": 365,
-  "tui": "fullscreen"
+  "tui": "fullscreen",
+  "theme": "dark"
 }
 ```
 
@@ -33,6 +34,14 @@ resumable, which is the point of everything below.
   weeks is still resumable. Trade-off: transcripts sit on disk longer, so keep
   **FileVault** on (already recommended) since they are plaintext.
 - **`tui: fullscreen`** runs the TUI full-screen; cosmetic.
+- **`theme: dark`** picks the colour scheme, which pairs with the soft-dark
+  terminal palette under [Terminal colors](#terminal-colors). Build 2.1.222
+  accepts `dark`, `light`, `dark-ansi`, `light-ansi`, `dark-daltonized`, and
+  `light-daltonized` (the `-ansi` pair for 16-colour terminals, `-daltonized` for
+  colour-vision deficiency). The key is **absent from the published settings
+  reference**, so like `CLAUDE_CONFIG_DIR` below it is an undocumented interface:
+  verified against one build, not a stable contract. What it does when unset was
+  not established, so no claim is made about the default.
 
 My `~/.claude/` hooks (secret-scanning, gitignore validation) and per-project
 scaffolding are not shipped here; they live in a separate dotfiles repo managed
@@ -767,6 +776,19 @@ relocating a full second config, and the per-config-dir **keychain isolation on
 macOS** is not documented either. Both are **observed on a working setup, not
 promised**, so re-check them after upgrades.
 
+**Get the variable name right, the documented-looking one does not work.** The
+published environment-variable reference names `CLAUDE_CODE_CONFIG_DIR`, but that
+is not the variable Claude Code reads for this. Tested against build 2.1.222 by
+pointing each at an empty directory and running `claude mcp list`:
+`CLAUDE_CONFIG_DIR` populated the directory, `CLAUDE_CODE_CONFIG_DIR` left it
+empty. So use **`CLAUDE_CONFIG_DIR`**, and if the wrapper ever stops isolating the
+accounts after an upgrade, re-run that test on both names before debugging
+anything else:
+
+```bash
+d=$(mktemp -d); CLAUDE_CONFIG_DIR="$d" claude mcp list >/dev/null 2>&1; ls -A "$d"
+```
+
 1. **Create the config dir.**
    ```bash
    mkdir -p "$HOME/.claude-extension"
@@ -797,15 +819,15 @@ promised**, so re-check them after upgrades.
    logins. Across a **work** seat and a **personal** one that leaks each org's
    context into the other; in that case skip this step and let the second account
    keep its own history.
-4. **Add a shell wrapper.** The repo keeps shell helpers like `proj` and
-   `initclaude` in the tracked `config/claude-proj.zsh` (installed by `setup.sh`);
-   put this wrapper there too so it restores on a new machine, rather than dropping
-   it in an untracked `~/.zshrc`:
+4. **Use the shell wrapper.** `config/claude-proj.zsh` already ships a
+   `claude-extension` function alongside `proj` and `initclaude`, so `setup.sh`
+   installs it for you:
    ```bash
    claude-extension() { CLAUDE_CONFIG_DIR="$HOME/.claude-extension" claude "$@"; }
    ```
-   Open a new shell (or re-source your zsh config) to pick it up. Use an
-   **absolute path** (`$HOME/...` expands to one);
+   Open a new shell (or re-source your zsh config) to pick it up. Keeping it in
+   that tracked file, rather than an untracked `~/.zshrc`, is what makes it
+   restore on a new machine. Use an **absolute path** (`$HOME/...` expands to one);
    do not pass a literal quoted `"~/..."`. The raw string is hashed into the
    keychain service name, so an inconsistent value across shells points at a
    different keychain item and forces a re-login.

@@ -9,6 +9,8 @@
 #               projects too. Session name is deterministic, so proj always
 #               reattaches the same session rather than spawning duplicates.
 #   initclaude  scaffold a CLAUDE.md (project memory) in the current folder.
+#   claude-extension
+#               run Claude Code as a second account, using its own config dir.
 
 # List Claude Code's known project dirs, deduped. Order follows $PROJ_SORT:
 #   recent (default) = most-recently-active first
@@ -109,4 +111,22 @@ EOF
     return 1
   fi
   print "✅ Wrote $target. Fill in the blanks, or have Claude fill it in from the codebase."
+}
+
+# Run Claude Code as a second account (a second seat, or a work login beside a
+# personal one). Each config dir keeps its own credentials, so the two logins do
+# not clobber each other. Set up the config dir first: see "A second Claude Code
+# account, side by side" in docs/ai-workstation.md.
+#
+# CLAUDE_CONFIG_DIR is an UNDOCUMENTED interface, verified behaviourally against
+# build 2.1.222: pointed at an empty directory, `claude mcp list` populated it.
+# The published environment-variable reference names CLAUDE_CODE_CONFIG_DIR
+# instead, and the same test left that directory empty, so the documented-looking
+# name does nothing. This can break silently on upgrade; re-run that test on both
+# names if the wrapper stops isolating the accounts.
+#
+# Uses an absolute path deliberately: the raw string is hashed into the macOS
+# keychain service name, so a literal "~/..." would point at a different item.
+claude-extension() {
+  CLAUDE_CONFIG_DIR="$HOME/.claude-extension" claude "$@"
 }
