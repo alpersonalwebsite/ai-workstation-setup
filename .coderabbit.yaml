@@ -1,0 +1,372 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+#
+# ai-workstation-setup, the PUBLIC workstation template.
+#
+# Shape (measured 2026-08-05): 15 files. 8 markdown, 2 shell, 1 zsh, 1 conf,
+# 1 workflow. CI runs shellcheck and bash -n on setup.sh. No git-crypt.
+#
+# Volume: 24 PRs between 2026-05-06 and 2026-08-05, mean 3.0 commits per PR
+# over the last 15 merged. docs/ai-workstation.md is by far the most edited
+# file, 21 of 48 changed-file entries across those PRs.
+#
+# WHAT MAKES THIS REPO DIFFERENT FROM EVERY OTHER ONE ON THIS ACCOUNT: it is
+# PUBLIC, and it is a template meant to be filled in by someone else. The
+# owner's own CLAUDE.md states the rule directly: this template carries only
+# a fill-in voice skeleton, never the personal voice rules and never any real
+# examples. Everything here is published the moment it merges.
+#
+# So the highest-value finding is not a bug. It is a leak: a bracketed
+# placeholder replaced with a real answer, an example lifted from actual
+# correspondence, a name, an email address, an employer, a machine hostname,
+# a private repository name, or an absolute path under a real home directory.
+# None of that will fail CI, and none of it is recoverable once pushed.
+#
+# The second rule this repo lives under is verbatim sync. Per that same
+# CLAUDE.md, the Verification section of claude/CLAUDE.example.md, the
+# fact-check, fill-claude-md and rca skills, the code-reviewer agent and
+# statusline.sh are universal and ship verbatim from private copies. A change
+# to any of them here is only half a change; the private copies and the
+# separate configuration-docs repository must move with it. A reviewer cannot
+# see those copies, which is exactly why the PR has to say so.
+#
+# ROLLOUT NOTE, deliberately imprecise. The precise version of this
+# paragraph was stale within a day of being written: it stated a total, a
+# remainder, and a band with 0.8 reviews/week of headroom, and the account
+# opens roughly 7 PRs/day, so a date-stamped figure carries about 9x that
+# margin in built-in drift.
+#
+# Reviews are requested rather than automatic in argo, cloudflare,
+# jobs-in-ai-world, local-platform, orchestra, claude-integrations and this
+# repo. Everything else still auto-reviews.
+#
+# Which Fair Usage band that leaves the account in turns almost entirely on
+# one number nobody has measured: reviews actually consumed per PR. Counting
+# CodeRabbit comments on argo gives ~1.1 per PR (n=12), but that is a LOWER
+# BOUND, because an incremental review updates the existing walkthrough
+# rather than posting a new comment. The working assumption elsewhere in
+# this rollout has been ~2.
+#
+# So do not trust arithmetic here over measurement. `@coderabbitai rate
+# limit` reports the real remaining budget without consuming a review, and
+# is the only authority on which band the account is actually in.
+#
+# What still auto-reviews is azure-scripts, dotfiles and
+# claude-code-configurations at roughly a seventh each of the remainder,
+# then a genuine long tail. Per-repo files will not finish this; the lever
+# for the tail is the organization-level configuration in the CodeRabbit web
+# UI, which applies to any repository without its own .coderabbit.yaml.
+
+language: "en-US"
+tone_instructions: "This repo is PUBLIC and is a fill-in template. The costliest finding is a leak: a real name, email, employer, host, home path, or a bracketed placeholder replaced with a real answer. Skip nits shellcheck reports."
+
+reviews:
+  profile: "chill"
+
+  # ------------------------------------------------------------------
+  # MANUAL REVIEW ONLY. Reviews are requested, never automatic.
+  #
+  # Trigger a review by commenting on the PR:
+  #     @coderabbitai review        incremental, new changes since last pass
+  #     @coderabbitai full review   re-analyze the whole diff from scratch
+  # Or by adding the `review` label (see labels below).
+  #
+  # WHY. This account is on PRO PLUS (confirmed from the "Plan: Pro Plus"
+  # line CodeRabbit prints in its own comments). Baseline is 10 reviews per
+  # hour, 300 files per review. Fair Usage degrades it on a rolling 7-day
+  # review count, quoted from the Pro Plus table at
+  # docs.coderabbit.ai/management/plans:
+  #     0-29 reviews / 7 days -> 10 reviews per hour
+  #     30-39                 -> 8
+  #     40-49                 -> 6
+  #     50-59                 -> 5
+  #     60-69                 -> 4
+  #     70-79                 -> 3
+  #     80-89                 -> 2
+  #     90+                   -> 1 review per hour, one at a time
+  #
+  # The account runs ~47 PRs/week across all repositories. Automatic review
+  # everywhere, even capped at one follow-up pass, is ~94 reviews/week, which
+  # lands in the 90+ band and the 1-per-hour floor. That is what makes
+  # manual-only the account-wide default.
+  #
+  # The cost is account-wide, not per repo. A single low-volume repository
+  # costs only its own PRs times ~2, so turning automatic review back on for
+  # one high-stakes, low-traffic repo is cheap; doing it everywhere is not.
+  #
+  # DELIBERATELY NOT HERE: which repositories are configured, and the band
+  # the account currently sits in. Those change on every rollout step, and
+  # keeping them in a block that is copied verbatim meant every new repo
+  # forced an N-file resync and left the others stale in between. That
+  # arithmetic lives in this file's own header instead, which differs per
+  # repo anyway. Everything above is account-wide and stable.
+  #
+  # Consequence worth knowing: the keys below that filter AUTOMATIC review
+  # (drafts, ignore_usernames, ignore_title_keywords, auto_incremental_review,
+  # auto_pause_after_reviewed_commits) are inert while enabled is false. They
+  # are kept so the block stays identical across repos and so flipping
+  # `enabled` to true is a one-line change with sane behavior already in
+  # place. This inertness is inferred from the schema, not measured.
+  #
+  # What DOES stay live: path_filters, path_instructions, tools, and profile.
+  # Those govern every review, requested or automatic, so they are where this
+  # file now does its work.
+  # ------------------------------------------------------------------
+  auto_review:
+    enabled: false
+
+    # Opt-in path. Per the schema, when `enabled` is false a positive label
+    # match triggers a review. Secondary to `@coderabbitai review`, which is
+    # the primary trigger here. UNVERIFIED against this account: confirm on
+    # the first labeled PR that a review actually posts.
+    labels:
+      - "review"
+
+    # --- inert while enabled is false; retained for a one-line flip ---
+    drafts: false
+    auto_incremental_review: true          # default: true
+    auto_pause_after_reviewed_commits: 1   # default: 5
+    base_branches: []                      # default: [] (default branch only)
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "renovate[bot]"
+      - "github-actions[bot]"
+    # Case-insensitive SUBSTRING match on the whole title. Bracketed forms
+    # fail safe: bare "WIP" would also match "swipe" or "wipe stale logs"
+    # and silently skip a review, whereas a bracketed token that misses just
+    # means a review runs when it need not have.
+    ignore_title_keywords:
+      - "[WIP]"
+      - "DO NOT MERGE"
+      - "[skip review]"
+
+  high_level_summary: true
+  poem: false
+  sequence_diagrams: false
+  changed_files_summary: false
+  suggested_labels: false
+  suggested_reviewers: false
+  related_issues: true
+  related_prs: true
+  review_status: true
+  abort_on_close: true
+  request_changes_workflow: false
+
+  # 15 files, all of them content. Everything but LICENSE is reviewed, and
+  # LICENSE needs no negation because nothing includes it.
+  path_filters:
+    - "claude/**/*"
+    - "config/**/*"
+    - "docs/**/*"
+    - ".github/**/*"
+    - "setup.sh"
+    - "README.md"
+    - ".gitignore"
+    - ".coderabbit.yaml"
+
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        THIS REPOSITORY IS PUBLIC AND IS A TEMPLATE OTHERS FILL IN. Apply this
+        check to every file in every diff, before anything else.
+
+        Flag anything that identifies a real person, place, or employer:
+        personal names, email addresses, company or client names, machine
+        hostnames, internal URLs, private repository names, and absolute paths
+        under a real home directory such as /Users/<name>. Placeholders like
+        /Users/you or <your-name> are correct and should stay.
+
+        Flag real examples of the owner's own writing. The template is meant
+        to carry structure, not samples. An example that reads like it was
+        lifted from an actual message, email, or review is a leak even when it
+        contains no name.
+
+        None of this fails CI, and none of it is recoverable once merged: the
+        repository is public and the history is public with it. Treat a
+        suspected leak as the highest-severity finding in the diff, above any
+        correctness issue.
+    - path: "claude/skills/writing-voice/SKILL.md"
+      instructions: |
+        This file must remain a SKELETON. The owner's private CLAUDE.md states
+        that the public template carries only a fill-in voice skeleton, never
+        the personal voice rules and never any real examples.
+
+        The bracketed prompts are the mechanism: `[short and direct? warm
+        bookends?]`, `[the point first, no greeting? emoji ok?]` and their
+        peers are questions the reader answers for themselves.
+
+        Flag any bracketed prompt replaced with a concrete answer, since that
+        is the owner's voice shipping publicly rather than a template.
+        Concrete style rules stated as fact rather than as a question are the
+        same problem in a different shape: a rule such as "never use em
+        dashes" or a specific greeting convention belongs in a private
+        CLAUDE.md, not here.
+
+        Adding a new bracketed prompt or a new format section is fine and
+        should not be flagged.
+    - path: "claude/CLAUDE.example.md"
+      instructions: |
+        The template CLAUDE.md, and a file with two halves that follow
+        opposite rules.
+
+        The Verification section ships VERBATIM from the owner's private
+        CLAUDE.md, so it is deliberately identical and should not be softened
+        or "improved" here in isolation. Flag a change to it that the PR does
+        not say is mirrored to the private copy and to the separate
+        configuration-docs repository, since a change made in only one place
+        is drift the reviewer cannot see.
+
+        The Writing voice section is the opposite: it must stay generic. Flag
+        any personal rule migrating into it from the private copy.
+
+        Everywhere else, flag placeholders replaced with real values, and any
+        instruction that would only make sense on the owner's own machine.
+    # Three explicit entries rather than a brace expansion. Braces may not be
+    # supported by the matcher, and a pattern that silently matches nothing is
+    # exactly the failure mode this file is trying to avoid elsewhere.
+    - path: "claude/skills/fact-check/**/*"
+      instructions: |
+        These skills ship verbatim from private copies, per the owner's
+        CLAUDE.md, which names every location that must move together: the
+        private CLAUDE.md, the configuration-docs repository, and this
+        template.
+
+        Flag a substantive change here that the PR description does not state
+        is mirrored to those copies. The reviewer cannot see them, so the PR
+        text is the only available evidence that the sync happened. A typo fix
+        does not need the ceremony; a changed rule, threshold, or step does.
+    - path: "claude/skills/fill-claude-md/**/*"
+      instructions: |
+        These skills ship verbatim from private copies, per the owner's
+        CLAUDE.md, which names every location that must move together: the
+        private CLAUDE.md, the configuration-docs repository, and this
+        template.
+
+        Flag a substantive change here that the PR description does not state
+        is mirrored to those copies. The reviewer cannot see them, so the PR
+        text is the only available evidence that the sync happened. A typo fix
+        does not need the ceremony; a changed rule, threshold, or step does.
+    - path: "claude/skills/rca/**/*"
+      instructions: |
+        These skills ship verbatim from private copies, per the owner's
+        CLAUDE.md, which names every location that must move together: the
+        private CLAUDE.md, the configuration-docs repository, and this
+        template.
+
+        Flag a substantive change here that the PR description does not state
+        is mirrored to those copies. The reviewer cannot see them, so the PR
+        text is the only available evidence that the sync happened. A typo fix
+        does not need the ceremony; a changed rule, threshold, or step does.
+    - path: "claude/agents/code-reviewer.md"
+      instructions: |
+        Ships verbatim from a private copy, like the universal skills. Flag a
+        substantive change that the PR does not state is mirrored.
+
+        Also flag instructions that assume repository-specific context. This
+        agent is used by strangers on codebases nobody here has seen, so a
+        rule referring to a particular project's conventions does not belong.
+    - path: "setup.sh"
+      instructions: |
+        An installer that strangers run against their own machine, writing
+        into $HOME. CI shellchecks it at --severity=style and runs bash -n, so
+        skip anything those already report and review the behavior instead.
+
+        The existing safety pattern is the thing to protect: install_config
+        backs up an existing file to a mktemp path before overwriting, and
+        destructive steps sit behind confirm() unless --assume-yes. Flag a new
+        write, replace, or rm that skips either, and any change that makes a
+        prompt default to yes.
+
+        Flag: `rm -rf` on a path built from an unset or unvalidated variable,
+        `curl` piped to a shell for anything not already vetted, writes
+        outside the paths the header documents, and non-idempotent steps that
+        would corrupt state on a second run. This is macOS-targeted, so flag
+        GNU-only behavior for sed, date, readlink, stat and grep -P.
+    - path: "claude/statusline.sh"
+      instructions: |
+        Ships verbatim from a private copy, and runs on every prompt render,
+        so cost and failure mode matter more than style. Flag anything slow,
+        network-dependent, or unbounded, and any path where a failure could
+        break the prompt rather than degrade quietly. Flag a substantive
+        change the PR does not state is mirrored.
+    - path: "config/**/*"
+      instructions: |
+        Shell configuration a stranger sources into their own environment.
+        Flag: functions or aliases that shadow common commands, unquoted
+        expansions, anything writing outside the documented paths, and
+        assumptions about a specific username, hostname, or directory layout.
+        Flag plugin or tool references pinned to a mutable ref where a commit
+        or version would do.
+    - path: "docs/**/*.md"
+      instructions: |
+        The main documentation, and the most edited file in the repository.
+        Review for ACCURACY AGAINST THE CODE, not prose quality.
+
+        Flag documented steps, flags, paths, or prerequisites that no longer
+        match setup.sh, config/, or the CI workflow changed in the same PR,
+        and screenshots or transcripts containing anything identifying, which
+        is the likeliest place for a leak to arrive unnoticed.
+    - path: ".github/workflows/**/*"
+      instructions: |
+        Flag `pull_request_target` combined with checkout of untrusted code,
+        actions pinned to mutable tags rather than commit SHAs, and missing
+        least-privilege `permissions:` blocks. The workflow currently sets
+        `permissions: contents: read` and `persist-credentials: false`; flag
+        any widening of either. Flag a change that weakens the gate, such as
+        lowering the shellcheck severity or dropping the syntax check.
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+
+  pre_merge_checks:
+    title:
+      mode: "off"
+    description:
+      mode: "off"
+    docstrings:
+      mode: "off"
+
+  tools:
+    shellcheck:
+      enabled: true       # setup.sh, statusline.sh, config/claude-proj.zsh
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: true
+    semgrep:
+      enabled: true
+    actionlint:
+      enabled: true       # .github/workflows/ci.yml
+    # Left ON here, unlike every other repo on this account. This is published
+    # prose that strangers read as a starting point, so presentation defects
+    # cost more than the noise they add across 8 markdown files.
+    markdownlint:
+      enabled: true
+    languagetool:
+      enabled: false      # style opinions on someone else's fill-in template
+
+chat:
+  art: false
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  code_guidelines:
+    enabled: true
+    # The template's own example config is the closest thing to a guidelines
+    # document here, and it is what the repository is teaching.
+    filePatterns:
+      - "claude/CLAUDE.example.md"
+      - "README.md"
+  learnings:
+    scope: "local"
+  pull_requests:
+    scope: "local"
