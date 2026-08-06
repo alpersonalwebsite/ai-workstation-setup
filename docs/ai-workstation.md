@@ -779,13 +779,21 @@ clobbering each other. One detail is not documented and was worked out here: the
 Claude Code's other variables, so the wrong name looks plausible, and it fails
 silently rather than erroring, leaving both accounts on one login. Tested on build
 2.1.222 by pointing each at an empty directory and running `claude mcp list`:
-`CLAUDE_CONFIG_DIR` populated it, `CLAUDE_CODE_CONFIG_DIR` left it empty. If the
-wrapper ever stops isolating the accounts, re-run that check before debugging
-anything else:
+`CLAUDE_CONFIG_DIR` populated it, `CLAUDE_CODE_CONFIG_DIR` left it empty. If a
+config dir ever stops being picked up, re-run that comparison before debugging
+anything else. It tests which variable selects the config directory, which is the
+step the account isolation rests on, not the isolation itself:
 
 ```bash
-d=$(mktemp -d); CLAUDE_CONFIG_DIR="$d" claude mcp list >/dev/null 2>&1; ls -A "$d"
+for v in CLAUDE_CONFIG_DIR CLAUDE_CODE_CONFIG_DIR; do
+  d=$(mktemp -d); env "$v=$d" claude mcp list >/dev/null 2>&1
+  printf '%s -> %s entries\n' "$v" "$(ls -A "$d" | wc -l | tr -d ' ')"; rm -rf "$d"
+done
 ```
+
+Expect a nonzero count for `CLAUDE_CONFIG_DIR` and zero for the other. Two
+nonzero counts would mean the wrong name started working; two zeros mean neither
+does, and the wrapper needs a different approach.
 
 1. **Create the config dir.**
    ```bash
