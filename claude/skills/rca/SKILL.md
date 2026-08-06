@@ -11,7 +11,7 @@ is a writeup someone can act on and trust, not a story.
 
 ## Gather first
 
-If I named the incident, use it. Otherwise ask what broke and when, then pull
+If an incident was named, use it. Otherwise ask what broke and when, then pull
 what you can: logs, metrics, recent deploys or changes, `git log` around the
 window, config diffs, alerts. Show the signal rather than describe it.
 
@@ -37,4 +37,4 @@ window, config diffs, alerts. Show the signal rather than describe it.
   out of anything committed to a shared repo; they belong in the private writeup.
 - Be specific and brief. No em dashes.
 
-Show the draft. Write it to a file only if I ask.
+Show the draft. Write it to a file only if asked.

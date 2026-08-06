@@ -22,7 +22,8 @@ resumable, which is the point of everything below.
 ```json
 {
   "cleanupPeriodDays": 365,
-  "tui": "fullscreen"
+  "tui": "fullscreen",
+  "theme": "dark"
 }
 ```
 
@@ -33,6 +34,14 @@ resumable, which is the point of everything below.
   weeks is still resumable. Trade-off: transcripts sit on disk longer, so keep
   **FileVault** on (already recommended) since they are plaintext.
 - **`tui: fullscreen`** runs the TUI full-screen; cosmetic.
+- **`theme: dark`** picks the colour scheme, which pairs with the soft-dark
+  terminal palette under [Terminal colors](#terminal-colors). The settings
+  reference documents the key, gives `"dark"` as the **default**, and lists
+  `auto`, `dark`, `light`, `dark-daltonized`, `light-daltonized`, `dark-ansi`,
+  `light-ansi`, plus a custom theme reference such as `custom:<slug>`. The `-ansi`
+  pair is for 16-colour terminals and `-daltonized` for colour-vision deficiency.
+  Since `dark` is already the default, setting it is explicitness rather than a
+  change; `auto` is the one to use if you want it to follow the system appearance.
 
 My `~/.claude/` hooks (secret-scanning, gitignore validation) and per-project
 scaffolding are not shipped here; they live in a separate dotfiles repo managed
@@ -756,16 +765,35 @@ not reflect promotional or contracted pricing and is not your bill.
 
 Running two Claude Code accounts at once (two seats, or a work login and a
 personal one) works by giving the second account its own config directory via the
-`CLAUDE_CONFIG_DIR` environment variable. Each config dir keeps its own
-credentials, so the logins do not clobber each other. On macOS the second
-account's credential lands in a separate login-keychain item, and that isolation
-is what makes this work. Note up front what is and is not documented: the auth CLI
-commands and the `ANTHROPIC_API_KEY` precedence below are documented, but
-**`CLAUDE_CONFIG_DIR`** is the fragile dependency the whole thing rests on. The
-docs mention it only for where credentials live on Linux and Windows, not for
-relocating a full second config, and the per-config-dir **keychain isolation on
-macOS** is not documented either. Both are **observed on a working setup, not
-promised**, so re-check them after upgrades.
+`CLAUDE_CONFIG_DIR` environment variable. This is the documented, supported path:
+the environment-variable reference describes it as overriding the configuration
+directory, with "all settings, session history, and plugins" stored under it, and
+names running multiple accounts side by side as the use case. Credentials follow
+the config dir on Linux and Windows; on macOS they live in the system Keychain,
+where each config dir gets its own item, which is what keeps the two logins from
+clobbering each other. One detail is not documented and was worked out here: the
+**naming of that per-config-dir Keychain item** (the hash below).
+
+**Get the variable name right.** It is `CLAUDE_CONFIG_DIR`. Do not guess
+`CLAUDE_CODE_CONFIG_DIR`: the `CLAUDE_CODE_` prefix is the house style for most of
+Claude Code's other variables, so the wrong name looks plausible, and it fails
+silently rather than erroring, leaving both accounts on one login. Tested on build
+2.1.222 by pointing each at an empty directory and running `claude mcp list`:
+`CLAUDE_CONFIG_DIR` populated it, `CLAUDE_CODE_CONFIG_DIR` left it empty. If a
+config dir ever stops being picked up, re-run that comparison before debugging
+anything else. It tests which variable selects the config directory, which is the
+step the account isolation rests on, not the isolation itself:
+
+```bash
+for v in CLAUDE_CONFIG_DIR CLAUDE_CODE_CONFIG_DIR; do
+  d=$(mktemp -d); env "$v=$d" claude mcp list >/dev/null 2>&1
+  printf '%s -> %s entries\n' "$v" "$(ls -A "$d" | wc -l | tr -d ' ')"; rm -rf "$d"
+done
+```
+
+Expect a nonzero count for `CLAUDE_CONFIG_DIR` and zero for the other. Two
+nonzero counts would mean the wrong name started working; two zeros mean neither
+does, and the wrapper needs a different approach.
 
 1. **Create the config dir.**
    ```bash
@@ -797,15 +825,15 @@ promised**, so re-check them after upgrades.
    logins. Across a **work** seat and a **personal** one that leaks each org's
    context into the other; in that case skip this step and let the second account
    keep its own history.
-4. **Add a shell wrapper.** The repo keeps shell helpers like `proj` and
-   `initclaude` in the tracked `config/claude-proj.zsh` (installed by `setup.sh`);
-   put this wrapper there too so it restores on a new machine, rather than dropping
-   it in an untracked `~/.zshrc`:
+4. **Use the shell wrapper.** `config/claude-proj.zsh` already ships a
+   `claude-extension` function alongside `proj` and `initclaude`, so `setup.sh`
+   installs it for you:
    ```bash
    claude-extension() { CLAUDE_CONFIG_DIR="$HOME/.claude-extension" claude "$@"; }
    ```
-   Open a new shell (or re-source your zsh config) to pick it up. Use an
-   **absolute path** (`$HOME/...` expands to one);
+   Open a new shell (or re-source your zsh config) to pick it up. Keeping it in
+   that tracked file, rather than an untracked `~/.zshrc`, is what makes it
+   restore on a new machine. Use an **absolute path** (`$HOME/...` expands to one);
    do not pass a literal quoted `"~/..."`. The raw string is hashed into the
    keychain service name, so an inconsistent value across shells points at a
    different keychain item and forces a re-login.
