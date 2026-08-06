@@ -118,12 +118,13 @@ EOF
 # not clobber each other. Set up the config dir first: see "A second Claude Code
 # account, side by side" in docs/ai-workstation.md.
 #
-# CLAUDE_CONFIG_DIR is an UNDOCUMENTED interface, verified behaviourally against
-# build 2.1.222: pointed at an empty directory, `claude mcp list` populated it.
-# The published environment-variable reference names CLAUDE_CODE_CONFIG_DIR
-# instead, and the same test left that directory empty, so the documented-looking
-# name does nothing. This can break silently on upgrade; re-run that test on both
-# names if the wrapper stops isolating the accounts.
+# CLAUDE_CONFIG_DIR is the documented variable for this: the environment-variable
+# reference names running multiple accounts side by side as its use case. Do not
+# guess CLAUDE_CODE_CONFIG_DIR; that prefix matches most other Claude Code
+# variables, so the wrong name looks right, and it no-ops silently instead of
+# erroring, leaving both accounts on one login. Confirmed on build 2.1.222: with
+# CLAUDE_CONFIG_DIR pointed at an empty dir, `claude mcp list` populated it, while
+# CLAUDE_CODE_CONFIG_DIR left it empty.
 #
 # Uses an absolute path deliberately: the raw string is hashed into the macOS
 # keychain service name, so a literal "~/..." would point at a different item.
