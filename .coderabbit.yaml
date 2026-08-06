@@ -143,10 +143,20 @@ reviews:
     - "config/**/*"
     - "docs/**/*"
     - ".github/**/*"
-    - "setup.sh"
-    - "README.md"
-    - ".gitignore"
-    - ".coderabbit.yaml"
+    # Root level, matched by pattern rather than enumerated. A single `*`
+    # matches one segment, so it covers root files only, and `.*` covers root
+    # dotfiles, which `*` cannot reach under minimatch's dot: false default.
+    # Enumerating them meant a new CONTRIBUTING.md, Makefile or .editorconfig
+    # would be silently unreviewed, which is the failure this file warns about
+    # everywhere else.
+    - "*"
+    - ".*"
+    # The one deliberate exclusion, and now load-bearing rather than
+    # decorative: `*` above would otherwise pull LICENSE in. Its MIT header
+    # carries a real copyright name, which is the license working correctly
+    # rather than a leak, and the top-level instruction flags real names
+    # without exception, so it would fire on every pull request touching it.
+    - "!LICENSE"
 
   path_instructions:
     - path: "**/*"
@@ -172,6 +182,16 @@ reviews:
     # `**/*` above does NOT reach .gitignore: minimatch defaults to dot: false
     # and a wildcard cannot match a leading dot, so the leak instruction skips
     # every dotfile. Named explicitly for that reason, not for emphasis.
+    - path: ".*"
+      instructions: |
+        Root-level dotfiles. The `**/*` instruction above cannot reach them:
+        minimatch defaults to dot: false, so no wildcard matches a leading
+        dot. This entry exists so the leak check covers the class rather than
+        only the dotfiles that happened to exist when this file was written.
+
+        Apply the full leak check here. Config and tooling dotfiles are a
+        common place for a real path, a machine-specific setting, or a private
+        repository name to appear in a rule written for one person's machine.
     - path: ".gitignore"
       instructions: |
         Apply the leak check from the `**/*` instruction here too: this file is
