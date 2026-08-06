@@ -3,7 +3,21 @@
 # ai-workstation-setup, the PUBLIC workstation template.
 #
 # Shape (measured 2026-08-05): 15 files. 8 markdown, 2 shell, 1 zsh, 1 conf,
-# 1 workflow. CI runs shellcheck and bash -n on setup.sh. No git-crypt.
+# 1 workflow, LICENSE and .gitignore. No git-crypt.
+#
+# CI IS BROADER THAN IT LOOKS, and what it already covers shapes what is
+# worth instructing here. Four jobs: shell (shellcheck setup.sh, bash -n,
+# zsh -n on config/claude-proj.zsh, plus two repo-specific assertions), a
+# tmux config parse on an isolated socket, a relative-markdown-link check,
+# and a gitleaks secret scan.
+#
+# So gitleaks below duplicates a CI job, and the docs link guidance overlaps
+# the link check. Both are kept deliberately: CI gates the merge, a review
+# comment explains, and neither runs on a fork's PR the same way. The two
+# repo-specific assertions matter more, and get their own instructions:
+# config/tmux.conf must ship pane capture OFF, and setup.sh's TPM_COMMIT
+# must match the upstream tag. CI catches a change to either, but not a PR
+# that edits the assertion and the value together.
 #
 # Volume: 24 PRs between 2026-05-06 and 2026-08-05, mean 3.0 commits per PR
 # over the last 15 merged. docs/ai-workstation.md is by far the most edited
@@ -50,9 +64,9 @@
 # limit` reports the real remaining budget without consuming a review, and
 # is the only authority on which band the account is actually in.
 #
-# What still auto-reviews is azure-scripts, dotfiles and
-# claude-code-configurations at roughly a seventh each of the remainder,
-# then a genuine long tail. Per-repo files will not finish this; the lever
+# What still auto-reviews is azure-scripts at roughly a sixth of the
+# remainder, then dotfiles and claude-code-configurations at roughly a
+# seventh each, then a genuine long tail. Per-repo files will not finish this; the lever
 # for the tail is the organization-level configuration in the CodeRabbit web
 # UI, which applies to any repository without its own .coderabbit.yaml.
 
@@ -153,6 +167,12 @@ reviews:
 
   # 15 files, all of them content. Everything but LICENSE is reviewed, and
   # LICENSE needs no negation because nothing includes it.
+  #
+  # THAT EXCLUSION IS DELIBERATE, not an oversight. The MIT header carries a
+  # real copyright name, which is the license working correctly rather than a
+  # leak. The top-level instruction below flags real names without exception,
+  # so pulling LICENSE into scope would flag that line on every PR touching
+  # it. Leave it out.
   path_filters:
     - "claude/**/*"
     - "config/**/*"
@@ -184,6 +204,21 @@ reviews:
         repository is public and the history is public with it. Treat a
         suspected leak as the highest-severity finding in the diff, above any
         correctness issue.
+    # `**/*` above does NOT reach .gitignore: minimatch defaults to dot: false
+    # and a wildcard cannot match a leading dot, so the leak instruction skips
+    # every dotfile. Named explicitly for that reason, not for emphasis.
+    - path: ".gitignore"
+      instructions: |
+        Apply the leak check from the `**/*` instruction here too: this file is
+        one of the likeliest places for a real path or private repository name
+        to appear, in a rule written to ignore something specific to one
+        machine.
+
+        It is also the boundary that keeps credentials out of a PUBLIC
+        repository. Flag any change that removes or narrows a rule covering
+        `.env`, `*.env`, `credentials*`, `secrets/`, `*.key`, or `*.pem`, and
+        flag a new negation that would un-ignore anything beyond an obvious
+        `.example` template.
     - path: "claude/skills/writing-voice/SKILL.md"
       instructions: |
         This file must remain a SKELETON. The owner's private CLAUDE.md states
@@ -276,6 +311,12 @@ reviews:
         write, replace, or rm that skips either, and any change that makes a
         prompt default to yes.
 
+        TPM_VERSION and TPM_COMMIT are a pinned pair, and CI verifies the
+        commit still matches what that tag resolves to upstream. Flag a bump
+        to one without the other, and treat a change to both alongside a
+        change to the verification step in ci.yml as the case that passes CI
+        while removing the pin's meaning.
+
         Flag: `rm -rf` on a path built from an unset or unvalidated variable,
         `curl` piped to a shell for anything not already vetted, writes
         outside the paths the header documents, and non-idempotent steps that
@@ -288,15 +329,40 @@ reviews:
         network-dependent, or unbounded, and any path where a failure could
         break the prompt rather than degrade quietly. Flag a substantive
         change the PR does not state is mirrored.
-    - path: "config/**/*"
+    - path: "config/claude-proj.zsh"
       instructions: |
-        Shell configuration a stranger sources into their own environment.
-        Flag: functions or aliases that shadow common commands, unquoted
-        expansions, anything writing outside the documented paths, and
-        assumptions about a specific username, hostname, or directory layout.
-        Flag plugin or tool references pinned to a mutable ref where a commit
-        or version would do.
-    - path: "docs/**/*.md"
+        A zsh file a stranger sources into their own shell.
+
+        DISREGARD SHELLCHECK FINDINGS ON THIS FILE. shellcheck parses bash and
+        reports a syntax error on zsh constructs here (SC1009 and friends);
+        those are artifacts, not defects. CodeRabbit has no way to scope a
+        linter to a path, and shellcheck earns its place on setup.sh and
+        statusline.sh, so the noise is accepted and documented rather than
+        removed. CI validates this file with `zsh -n`, which is the real gate.
+
+        Review the behavior instead. Flag: functions or aliases that shadow
+        common commands, unquoted expansions, anything writing outside the
+        paths the header documents, and assumptions about a specific username,
+        hostname, or directory layout.
+    - path: "config/tmux.conf"
+      instructions: |
+        tmux configuration, parsed in CI on an isolated socket.
+
+        ONE INVARIANT IS ASSERTED BY CI AND WORTH PROTECTING HERE TOO:
+        `set -g @resurrect-capture-pane-contents 'off'` must ship exactly as
+        written, and the `'on'` variant must stay commented out. Pane capture
+        writes terminal contents to disk, so shipping it enabled would have a
+        template quietly persist strangers' pane output.
+
+        CI fails on a change to that line alone, which is why the case to
+        watch is a PR that edits the line AND the assertion in
+        .github/workflows/ci.yml together: that passes CI while removing the
+        protection. Flag that combination explicitly.
+
+        Otherwise flag plugin references pinned to a mutable ref where a
+        commit would do, and keybindings that shadow common defaults without
+        a note.
+    - path: "docs/**/*"
       instructions: |
         The main documentation, and the most edited file in the repository.
         Review for ACCURACY AGAINST THE CODE, not prose quality.
