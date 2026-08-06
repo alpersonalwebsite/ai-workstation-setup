@@ -19,9 +19,11 @@
 # must match the upstream tag. CI catches a change to either, but not a PR
 # that edits the assertion and the value together.
 #
-# Volume: 24 PRs between 2026-05-06 and 2026-08-05, mean 3.0 commits per PR
-# over the last 15 merged. docs/ai-workstation.md is by far the most edited
-# file, 21 of 48 changed-file entries across those PRs.
+# Volume: 24 PRs between 2026-05-06 and 2026-08-05, mean 2.6 commits per PR
+# over the last 15 merged (3.16 over the last 25). docs/ai-workstation.md
+# is by far the most edited file: 22 of 51 changed-file entries across
+# those 25 PRs, 23 counting its pre-move path, against 5 for the
+# runner-up.
 #
 # WHAT MAKES THIS REPO DIFFERENT FROM EVERY OTHER ONE ON THIS ACCOUNT: it is
 # PUBLIC, and it is a template meant to be filled in by someone else. The
@@ -43,32 +45,16 @@
 # separate configuration-docs repository must move with it. A reviewer cannot
 # see those copies, which is exactly why the PR has to say so.
 #
-# ROLLOUT NOTE, deliberately imprecise. The precise version of this
-# paragraph was stale within a day of being written: it stated a total, a
-# remainder, and a band with 0.8 reviews/week of headroom, and the account
-# opens roughly 7 PRs/day, so a date-stamped figure carries about 9x that
-# margin in built-in drift.
+# WHY REVIEWS ARE REQUESTED HERE. Automatic review is off in this repository
+# and in the others its owner maintains, so a review happens when asked for.
+# The reasoning behind that, along with the rollout arithmetic, lives in the
+# private configs where it belongs.
 #
-# Reviews are requested rather than automatic in argo, cloudflare,
-# jobs-in-ai-world, local-platform, orchestra, claude-integrations and this
-# repo. Everything else still auto-reviews.
-#
-# Which Fair Usage band that leaves the account in turns almost entirely on
-# one number nobody has measured: reviews actually consumed per PR. Counting
-# CodeRabbit comments on argo gives ~1.1 per PR (n=12), but that is a LOWER
-# BOUND, because an incremental review updates the existing walkthrough
-# rather than posting a new comment. The working assumption elsewhere in
-# this rollout has been ~2.
-#
-# So do not trust arithmetic here over measurement. `@coderabbitai rate
-# limit` reports the real remaining budget without consuming a review, and
-# is the only authority on which band the account is actually in.
-#
-# What still auto-reviews is azure-scripts at roughly a sixth of the
-# remainder, then dotfiles and claude-code-configurations at roughly a
-# seventh each, then a genuine long tail. Per-repo files will not finish this; the lever
-# for the tail is the organization-level configuration in the CodeRabbit web
-# UI, which applies to any repository without its own .coderabbit.yaml.
+# NOTHING ABOUT THE OWNER'S OTHER REPOSITORIES BELONGS IN THIS FILE. An
+# earlier revision listed nine of them by name here, plus account-wide pull
+# request volume, in a PUBLIC repository whose own top-level instruction
+# below defines a private repository name as a highest-severity leak. Keep
+# this file's rationale about this file.
 
 language: "en-US"
 tone_instructions: "This repo is PUBLIC and is a fill-in template. The costliest finding is a leak: a real name, email, employer, host, home path, or a bracketed placeholder replaced with a real answer. Skip nits shellcheck reports."
@@ -98,14 +84,13 @@ reviews:
   #     80-89                 -> 2
   #     90+                   -> 1 review per hour, one at a time
   #
-  # The account runs ~47 PRs/week across all repositories. Automatic review
-  # everywhere, even capped at one follow-up pass, is ~94 reviews/week, which
-  # lands in the 90+ band and the 1-per-hour floor. That is what makes
-  # manual-only the account-wide default.
-  #
-  # The cost is account-wide, not per repo. A single low-volume repository
-  # costs only its own PRs times ~2, so turning automatic review back on for
-  # one high-stakes, low-traffic repo is cheap; doing it everywhere is not.
+  # THIS COPY OF THE BLOCK DIVERGES FROM THE PRIVATE ONES, DELIBERATELY.
+  # They state account-wide pull request volume and the resulting review
+  # arithmetic. This repository is public, so that paragraph is removed here.
+  # Byte-identity across copies was only ever a convenience for avoiding
+  # N-file syncs; it is not worth publishing the owner's activity data to
+  # preserve. If you are diffing this against a private copy, that gap is
+  # intentional.
   #
   # DELIBERATELY NOT HERE: which repositories are configured, and the band
   # the account currently sits in. Those change on every rollout step, and
@@ -117,7 +102,7 @@ reviews:
   # Consequence worth knowing: the keys below that filter AUTOMATIC review
   # (drafts, ignore_usernames, ignore_title_keywords, auto_incremental_review,
   # auto_pause_after_reviewed_commits) are inert while enabled is false. They
-  # are kept so the block stays identical across repos and so flipping
+  # are kept so the block stays close to identical across repos and so flipping
   # `enabled` to true is a one-line change with sane behavior already in
   # place. This inertness is inferred from the schema, not measured.
   #
@@ -371,8 +356,34 @@ reviews:
         match setup.sh, config/, or the CI workflow changed in the same PR,
         and screenshots or transcripts containing anything identifying, which
         is the likeliest place for a leak to arrive unnoticed.
-    - path: ".github/workflows/**/*"
+    - path: ".coderabbit.yaml"
       instructions: |
+        Apply the leak check from the `**/*` instruction here too. That
+        pattern cannot reach this path: minimatch defaults to dot: false, so
+        a wildcard never matches a leading dot, and the highest-priority rule
+        in this file would otherwise skip it.
+
+        This file is a plausible leak site in its own right: an earlier
+        revision listed nine private repository names in its header. Flag any
+        reference to another repository, to account-wide activity, or to
+        anything that describes the owner's setup rather than this one.
+
+        Otherwise check the config's own traps: a `path_filters` or
+        `path_instructions` entry ending in `/**` matches directory paths
+        rather than files and so applies to nothing, a wildcard cannot match a
+        leading dot, and `tone_instructions` has a 250-character limit above
+        which the whole file is rejected and the repository silently falls
+        back to defaults.
+    - path: ".github/**/*"
+      instructions: |
+        Apply the leak check from the `**/*` instruction here too. That
+        pattern cannot reach this path: minimatch defaults to dot: false, so
+        a wildcard never matches a leading dot, and the highest-priority rule
+        in this file would otherwise skip it.
+
+        Runner labels, organization names, internal URLs and self-hosted
+        runner hostnames are the likely forms here.
+
         Flag `pull_request_target` combined with checkout of untrusted code,
         actions pinned to mutable tags rather than commit SHAs, and missing
         least-privilege `permissions:` blocks. The workflow currently sets
