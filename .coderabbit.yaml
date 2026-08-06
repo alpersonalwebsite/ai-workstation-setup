@@ -50,11 +50,10 @@
 # The reasoning behind that, along with the rollout arithmetic, lives in the
 # private configs where it belongs.
 #
-# NOTHING ABOUT THE OWNER'S OTHER REPOSITORIES BELONGS IN THIS FILE. An
-# earlier revision listed nine of them by name here, plus account-wide pull
-# request volume, in a PUBLIC repository whose own top-level instruction
-# below defines a private repository name as a highest-severity leak. Keep
-# this file's rationale about this file.
+# NOTHING ABOUT ANY OTHER REPOSITORY BELONGS IN THIS FILE. No names, no
+# activity figures, no cross-repo rollout state. This repository is public,
+# and the instruction below treats a private repository name as a
+# highest-severity leak, so this file's rationale stays about this file.
 
 language: "en-US"
 tone_instructions: "This repo is PUBLIC and is a fill-in template. The costliest finding is a leak: a real name, email, employer, host, home path, or a bracketed placeholder replaced with a real answer. Skip nits shellcheck reports."
@@ -70,34 +69,15 @@ reviews:
   #     @coderabbitai full review   re-analyze the whole diff from scratch
   # Or by adding the `review` label (see labels below).
   #
-  # WHY. This account is on PRO PLUS (confirmed from the "Plan: Pro Plus"
-  # line CodeRabbit prints in its own comments). Baseline is 10 reviews per
-  # hour, 300 files per review. Fair Usage degrades it on a rolling 7-day
-  # review count, quoted from the Pro Plus table at
-  # docs.coderabbit.ai/management/plans:
-  #     0-29 reviews / 7 days -> 10 reviews per hour
-  #     30-39                 -> 8
-  #     40-49                 -> 6
-  #     50-59                 -> 5
-  #     60-69                 -> 4
-  #     70-79                 -> 3
-  #     80-89                 -> 2
-  #     90+                   -> 1 review per hour, one at a time
+  # WHY. Requested-only review keeps this repository's review budget
+  # predictable and means every review runs against a finished diff rather
+  # than a moving branch. The account-level reasoning behind that choice is
+  # kept with the maintainer's private configuration, not here.
   #
-  # THIS COPY OF THE BLOCK DIVERGES FROM THE PRIVATE ONES, DELIBERATELY.
-  # They state account-wide pull request volume and the resulting review
-  # arithmetic. This repository is public, so that paragraph is removed here.
-  # Byte-identity across copies was only ever a convenience for avoiding
-  # N-file syncs; it is not worth publishing the owner's activity data to
-  # preserve. If you are diffing this against a private copy, that gap is
-  # intentional.
-  #
-  # DELIBERATELY NOT HERE: which repositories are configured, and the band
-  # the account currently sits in. Those change on every rollout step, and
-  # keeping them in a block that is copied verbatim meant every new repo
-  # forced an N-file resync and left the others stale in between. That
-  # arithmetic lives in this file's own header instead, which differs per
-  # repo anyway. Everything above is account-wide and stable.
+  # THIS COPY OF THE BLOCK IS TRIMMED RELATIVE TO THE PRIVATE ONES,
+  # DELIBERATELY. They carry plan details, Fair Usage arithmetic and
+  # account-wide volume. This repository is public, so none of that appears
+  # here. If you are diffing against a private copy, the gap is intentional.
   #
   # Consequence worth knowing: the keys below that filter AUTOMATIC review
   # (drafts, ignore_usernames, ignore_title_keywords, auto_incremental_review,
@@ -363,10 +343,11 @@ reviews:
         a wildcard never matches a leading dot, and the highest-priority rule
         in this file would otherwise skip it.
 
-        This file is a plausible leak site in its own right: an earlier
-        revision listed nine private repository names in its header. Flag any
-        reference to another repository, to account-wide activity, or to
-        anything that describes the owner's setup rather than this one.
+        This file is a plausible leak site in its own right, since a config
+        header is a natural place to explain a wider setup. Flag any reference
+        to another repository, to account-wide activity, or to anything
+        describing the maintainer's broader environment rather than this
+        repository.
 
         Otherwise check the config's own traps: a `path_filters` or
         `path_instructions` entry ending in `/**` matches directory paths
