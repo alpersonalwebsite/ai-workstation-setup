@@ -143,6 +143,13 @@ reviews:
     - "config/**/*"
     - "docs/**/*"
     - ".github/**/*"
+    # Files under ANY dot-directory, present or future. `.github/**/*` above
+    # names the only one that exists today, and `**/*` cannot reach it: a
+    # wildcard does not cross a leading dot under minimatch's dot: false
+    # default. Without this, a later `.vscode/`, `.devcontainer/` or `.husky/`
+    # is silently unreviewed, leak instruction included. Measured: with the
+    # pattern absent, `.vscode/settings.json` matched none of these filters.
+    - "**/.*/**/*"
     # Root level, matched by pattern rather than enumerated. A single `*`
     # matches one segment, so it covers root files only, and `.*` covers root
     # dotfiles, which `*` cannot reach under minimatch's dot: false default.
@@ -192,6 +199,17 @@ reviews:
         Apply the full leak check here. Config and tooling dotfiles are a
         common place for a real path, a machine-specific setting, or a private
         repository name to appear in a rule written for one person's machine.
+    - path: "**/.*/**/*"
+      instructions: |
+        Files inside a dot-directory, which `**/*` cannot reach either, for the
+        same reason: the wildcard does not cross a leading dot. `.github/**/*`
+        below covers the only such directory today, so this entry exists for
+        the class, and a later `.vscode/`, `.devcontainer/` or `.husky/`
+        inherits the leak check rather than arriving uninstructed.
+
+        Apply the full leak check here. Editor and tooling directories are a
+        likely place for an absolute path under a real home directory, a
+        machine-specific setting, or a private repository name.
     - path: ".gitignore"
       instructions: |
         Apply the leak check from the `**/*` instruction here too: this file is
