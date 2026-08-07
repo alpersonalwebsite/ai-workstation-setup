@@ -1,0 +1,450 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+#
+# ai-workstation-setup, the PUBLIC workstation template.
+#
+# Shape (measured 2026-08-05): 15 files. 8 markdown, 2 shell, 1 zsh, 1 conf,
+# 1 workflow, LICENSE and .gitignore. No git-crypt.
+#
+# CI IS BROADER THAN IT LOOKS, and what it already covers shapes what is
+# worth instructing here. Four jobs: shell (shellcheck setup.sh, bash -n,
+# zsh -n on config/claude-proj.zsh, plus two repo-specific assertions), a
+# tmux config parse on an isolated socket, a relative-markdown-link check,
+# and a gitleaks secret scan.
+#
+# So gitleaks below duplicates a CI job, and the docs link guidance overlaps
+# the link check. Both are kept deliberately: CI gates the merge, a review
+# comment explains, and neither runs on a fork's PR the same way. The two
+# repo-specific assertions matter more, and get their own instructions:
+# config/tmux.conf must ship pane capture OFF, and setup.sh's TPM_COMMIT
+# must match the upstream tag. CI catches a change to either, but not a PR
+# that edits the assertion and the value together.
+#
+# Volume: 24 PRs between 2026-05-06 and 2026-08-05, mean 2.6 commits per PR
+# over the last 15 merged (3.16 over the last 25). docs/ai-workstation.md
+# is by far the most edited file: 22 of 51 changed-file entries across
+# those 25 PRs, 23 counting its pre-move path, against 5 for the
+# runner-up.
+#
+# WHAT MAKES THIS REPO DIFFERENT FROM EVERY OTHER ONE ON THIS ACCOUNT: it is
+# PUBLIC, and it is a template meant to be filled in by someone else. The
+# owner's own CLAUDE.md states the rule directly: this template carries only
+# a fill-in voice skeleton, never the personal voice rules and never any real
+# examples. Everything here is published the moment it merges.
+#
+# So the highest-value finding is not a bug. It is a leak: a bracketed
+# placeholder replaced with a real answer, an example lifted from actual
+# correspondence, a name, an email address, an employer, a machine hostname,
+# a private repository name, or an absolute path under a real home directory.
+# None of that will fail CI, and none of it is recoverable once pushed.
+#
+# The second rule this repo lives under is verbatim sync. Per that same
+# CLAUDE.md, the Verification section of claude/CLAUDE.example.md, the
+# fact-check, fill-claude-md and rca skills, the code-reviewer agent and
+# statusline.sh are universal and ship verbatim from private copies. A change
+# to any of them here is only half a change; the private copies and the
+# separate configuration-docs repository must move with it. A reviewer cannot
+# see those copies, which is exactly why the PR has to say so.
+#
+# WHY REVIEWS ARE REQUESTED HERE. Automatic review is off in this repository
+# and in the others its owner maintains, so a review happens when asked for.
+# The reasoning behind that, along with the rollout arithmetic, lives in the
+# private configs where it belongs.
+#
+# NOTHING ABOUT ANY OTHER REPOSITORY BELONGS IN THIS FILE. No names, no
+# activity figures, no cross-repo rollout state. This repository is public,
+# and the instruction below treats a private repository name as a
+# highest-severity leak, so this file's rationale stays about this file.
+
+language: "en-US"
+tone_instructions: "This repo is PUBLIC and is a fill-in template. The costliest finding is a leak: a real name, email, employer, host, home path, or a bracketed placeholder replaced with a real answer. Skip nits shellcheck reports."
+
+reviews:
+  profile: "chill"
+
+  # ------------------------------------------------------------------
+  # MANUAL REVIEW ONLY. Reviews are requested, never automatic.
+  #
+  # Trigger a review by commenting on the PR:
+  #     @coderabbitai review        incremental, new changes since last pass
+  #     @coderabbitai full review   re-analyze the whole diff from scratch
+  # Or by adding the `review` label (see labels below).
+  #
+  # WHY. Requested-only review keeps this repository's review budget
+  # predictable and means every review runs against a finished diff rather
+  # than a moving branch. The account-level reasoning behind that choice is
+  # kept with the maintainer's private configuration, not here.
+  #
+  # THIS COPY OF THE BLOCK IS TRIMMED RELATIVE TO THE PRIVATE ONES,
+  # DELIBERATELY. They carry plan details, Fair Usage arithmetic and
+  # account-wide volume. This repository is public, so none of that appears
+  # here. If you are diffing against a private copy, the gap is intentional.
+  #
+  # Consequence worth knowing: the keys below that filter AUTOMATIC review
+  # (drafts, ignore_usernames, ignore_title_keywords, auto_incremental_review,
+  # auto_pause_after_reviewed_commits) are inert while enabled is false. They
+  # are kept so the block stays close to identical across repos and so flipping
+  # `enabled` to true is a one-line change with sane behavior already in
+  # place. This inertness is inferred from the schema, not measured.
+  #
+  # What DOES stay live: path_filters, path_instructions, tools, and profile.
+  # Those govern every review, requested or automatic, so they are where this
+  # file now does its work.
+  # ------------------------------------------------------------------
+  auto_review:
+    enabled: false
+
+    # Opt-in path. Per the schema, when `enabled` is false a positive label
+    # match triggers a review. Secondary to `@coderabbitai review`, which is
+    # the primary trigger here. UNVERIFIED against this account: confirm on
+    # the first labeled PR that a review actually posts.
+    labels:
+      - "review"
+
+    # --- inert while enabled is false; retained for a one-line flip ---
+    drafts: false
+    auto_incremental_review: true          # default: true
+    auto_pause_after_reviewed_commits: 1   # default: 5
+    base_branches: []                      # default: [] (default branch only)
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "renovate[bot]"
+      - "github-actions[bot]"
+    # Case-insensitive SUBSTRING match on the whole title. Bracketed forms
+    # fail safe: bare "WIP" would also match "swipe" or "wipe stale logs"
+    # and silently skip a review, whereas a bracketed token that misses just
+    # means a review runs when it need not have.
+    ignore_title_keywords:
+      - "[WIP]"
+      - "DO NOT MERGE"
+      - "[skip review]"
+
+  high_level_summary: true
+  poem: false
+  sequence_diagrams: false
+  changed_files_summary: false
+  suggested_labels: false
+  suggested_reviewers: false
+  related_issues: true
+  related_prs: true
+  review_status: true
+  abort_on_close: true
+  request_changes_workflow: false
+
+  # 15 files, all of them content. Everything but LICENSE is reviewed, and
+  # LICENSE needs no negation because nothing includes it.
+  #
+  # THAT EXCLUSION IS DELIBERATE, not an oversight. The MIT header carries a
+  # real copyright name, which is the license working correctly rather than a
+  # leak. The top-level instruction below flags real names without exception,
+  # so pulling LICENSE into scope would flag that line on every PR touching
+  # it. Leave it out.
+  path_filters:
+    - "claude/**/*"
+    - "config/**/*"
+    - "docs/**/*"
+    - ".github/**/*"
+    # Root level, matched by pattern rather than enumerated. A single `*`
+    # matches one segment, so it covers root files only, and `.*` covers root
+    # dotfiles, which `*` cannot reach under minimatch's dot: false default.
+    # Enumerating them meant a new CONTRIBUTING.md, Makefile or .editorconfig
+    # would be silently unreviewed, which is the failure this file warns about
+    # everywhere else.
+    - "*"
+    - ".*"
+    # The one deliberate exclusion, and now load-bearing rather than
+    # decorative: `*` above would otherwise pull LICENSE in. Its MIT header
+    # carries a real copyright name, which is the license working correctly
+    # rather than a leak, and the top-level instruction flags real names
+    # without exception, so it would fire on every pull request touching it.
+    - "!LICENSE"
+
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        THIS REPOSITORY IS PUBLIC AND IS A TEMPLATE OTHERS FILL IN. Apply this
+        check to every file in every diff, before anything else.
+
+        Flag anything that identifies a real person, place, or employer:
+        personal names, email addresses, company or client names, machine
+        hostnames, internal URLs, private repository names, and absolute paths
+        under a real home directory such as /Users/<name>. Placeholders like
+        /Users/you or <your-name> are correct and should stay.
+
+        Flag real examples of the owner's own writing. The template is meant
+        to carry structure, not samples. An example that reads like it was
+        lifted from an actual message, email, or review is a leak even when it
+        contains no name.
+
+        None of this fails CI, and none of it is recoverable once merged: the
+        repository is public and the history is public with it. Treat a
+        suspected leak as the highest-severity finding in the diff, above any
+        correctness issue.
+    # `**/*` above does NOT reach .gitignore: minimatch defaults to dot: false
+    # and a wildcard cannot match a leading dot, so the leak instruction skips
+    # every dotfile. Named explicitly for that reason, not for emphasis.
+    - path: ".*"
+      instructions: |
+        Root-level dotfiles. The `**/*` instruction above cannot reach them:
+        minimatch defaults to dot: false, so no wildcard matches a leading
+        dot. This entry exists so the leak check covers the class rather than
+        only the dotfiles that happened to exist when this file was written.
+
+        Apply the full leak check here. Config and tooling dotfiles are a
+        common place for a real path, a machine-specific setting, or a private
+        repository name to appear in a rule written for one person's machine.
+    - path: ".gitignore"
+      instructions: |
+        Apply the leak check from the `**/*` instruction here too: this file is
+        one of the likeliest places for a real path or private repository name
+        to appear, in a rule written to ignore something specific to one
+        machine.
+
+        It is also the boundary that keeps credentials out of a PUBLIC
+        repository. Flag any change that removes or narrows a rule covering
+        `.env`, `*.env`, `credentials*`, `secrets/`, `*.key`, or `*.pem`, and
+        flag a new negation that would un-ignore anything beyond an obvious
+        `.example` template.
+    - path: "claude/skills/writing-voice/SKILL.md"
+      instructions: |
+        This file must remain a SKELETON. The owner's private CLAUDE.md states
+        that the public template carries only a fill-in voice skeleton, never
+        the personal voice rules and never any real examples.
+
+        The bracketed prompts are the mechanism: `[short and direct? warm
+        bookends?]`, `[the point first, no greeting? emoji ok?]` and their
+        peers are questions the reader answers for themselves.
+
+        Flag any bracketed prompt replaced with a concrete answer, since that
+        is the owner's voice shipping publicly rather than a template.
+        Concrete style rules stated as fact rather than as a question are the
+        same problem in a different shape: a rule such as "never use em
+        dashes" or a specific greeting convention belongs in a private
+        CLAUDE.md, not here.
+
+        Adding a new bracketed prompt or a new format section is fine and
+        should not be flagged.
+    - path: "claude/CLAUDE.example.md"
+      instructions: |
+        The template CLAUDE.md, and a file with two halves that follow
+        opposite rules.
+
+        The Verification section ships VERBATIM from the owner's private
+        CLAUDE.md, so it is deliberately identical and should not be softened
+        or "improved" here in isolation. Flag a change to it that the PR does
+        not say is mirrored to the private copy and to the separate
+        configuration-docs repository, since a change made in only one place
+        is drift the reviewer cannot see.
+
+        The Writing voice section is the opposite: it must stay generic. Flag
+        any personal rule migrating into it from the private copy.
+
+        Everywhere else, flag placeholders replaced with real values, and any
+        instruction that would only make sense on the owner's own machine.
+    # Three explicit entries rather than a brace expansion. Braces may not be
+    # supported by the matcher, and a pattern that silently matches nothing is
+    # exactly the failure mode this file is trying to avoid elsewhere.
+    - path: "claude/skills/fact-check/**/*"
+      instructions: |
+        These skills ship verbatim from private copies, per the owner's
+        CLAUDE.md, which names every location that must move together: the
+        private CLAUDE.md, the configuration-docs repository, and this
+        template.
+
+        Flag a substantive change here that the PR description does not state
+        is mirrored to those copies. The reviewer cannot see them, so the PR
+        text is the only available evidence that the sync happened. A typo fix
+        does not need the ceremony; a changed rule, threshold, or step does.
+    - path: "claude/skills/fill-claude-md/**/*"
+      instructions: |
+        These skills ship verbatim from private copies, per the owner's
+        CLAUDE.md, which names every location that must move together: the
+        private CLAUDE.md, the configuration-docs repository, and this
+        template.
+
+        Flag a substantive change here that the PR description does not state
+        is mirrored to those copies. The reviewer cannot see them, so the PR
+        text is the only available evidence that the sync happened. A typo fix
+        does not need the ceremony; a changed rule, threshold, or step does.
+    - path: "claude/skills/rca/**/*"
+      instructions: |
+        These skills ship verbatim from private copies, per the owner's
+        CLAUDE.md, which names every location that must move together: the
+        private CLAUDE.md, the configuration-docs repository, and this
+        template.
+
+        Flag a substantive change here that the PR description does not state
+        is mirrored to those copies. The reviewer cannot see them, so the PR
+        text is the only available evidence that the sync happened. A typo fix
+        does not need the ceremony; a changed rule, threshold, or step does.
+    - path: "claude/agents/code-reviewer.md"
+      instructions: |
+        Ships verbatim from a private copy, like the universal skills. Flag a
+        substantive change that the PR does not state is mirrored.
+
+        Also flag instructions that assume repository-specific context. This
+        agent is used by strangers on codebases nobody here has seen, so a
+        rule referring to a particular project's conventions does not belong.
+    - path: "setup.sh"
+      instructions: |
+        An installer that strangers run against their own machine, writing
+        into $HOME. CI shellchecks it at --severity=style and runs bash -n, so
+        skip anything those already report and review the behavior instead.
+
+        The existing safety pattern is the thing to protect: install_config
+        backs up an existing file to a mktemp path before overwriting, and
+        destructive steps sit behind confirm() unless --assume-yes. Flag a new
+        write, replace, or rm that skips either, and any change that makes a
+        prompt default to yes.
+
+        TPM_VERSION and TPM_COMMIT are a pinned pair, and CI verifies the
+        commit still matches what that tag resolves to upstream. Flag a bump
+        to one without the other, and treat a change to both alongside a
+        change to the verification step in ci.yml as the case that passes CI
+        while removing the pin's meaning.
+
+        Flag: `rm -rf` on a path built from an unset or unvalidated variable,
+        `curl` piped to a shell for anything not already vetted, writes
+        outside the paths the header documents, and non-idempotent steps that
+        would corrupt state on a second run. This is macOS-targeted, so flag
+        GNU-only behavior for sed, date, readlink, stat and grep -P.
+    - path: "claude/statusline.sh"
+      instructions: |
+        Ships verbatim from a private copy, and runs on every prompt render,
+        so cost and failure mode matter more than style. Flag anything slow,
+        network-dependent, or unbounded, and any path where a failure could
+        break the prompt rather than degrade quietly. Flag a substantive
+        change the PR does not state is mirrored.
+    - path: "config/claude-proj.zsh"
+      instructions: |
+        A zsh file a stranger sources into their own shell.
+
+        DISREGARD SHELLCHECK FINDINGS ON THIS FILE. shellcheck parses bash and
+        reports a syntax error on zsh constructs here (SC1009 and friends);
+        those are artifacts, not defects. CodeRabbit has no way to scope a
+        linter to a path, and shellcheck earns its place on setup.sh and
+        statusline.sh, so the noise is accepted and documented rather than
+        removed. CI validates this file with `zsh -n`, which is the real gate.
+
+        Review the behavior instead. Flag: functions or aliases that shadow
+        common commands, unquoted expansions, anything writing outside the
+        paths the header documents, and assumptions about a specific username,
+        hostname, or directory layout.
+    - path: "config/tmux.conf"
+      instructions: |
+        tmux configuration, parsed in CI on an isolated socket.
+
+        ONE INVARIANT IS ASSERTED BY CI AND WORTH PROTECTING HERE TOO:
+        `set -g @resurrect-capture-pane-contents 'off'` must ship exactly as
+        written, and the `'on'` variant must stay commented out. Pane capture
+        writes terminal contents to disk, so shipping it enabled would have a
+        template quietly persist strangers' pane output.
+
+        CI fails on a change to that line alone, which is why the case to
+        watch is a PR that edits the line AND the assertion in
+        .github/workflows/ci.yml together: that passes CI while removing the
+        protection. Flag that combination explicitly.
+
+        Otherwise flag plugin references pinned to a mutable ref where a
+        commit would do, and keybindings that shadow common defaults without
+        a note.
+    - path: "docs/**/*"
+      instructions: |
+        The main documentation, and the most edited file in the repository.
+        Review for ACCURACY AGAINST THE CODE, not prose quality.
+
+        Flag documented steps, flags, paths, or prerequisites that no longer
+        match setup.sh, config/, or the CI workflow changed in the same PR,
+        and screenshots or transcripts containing anything identifying, which
+        is the likeliest place for a leak to arrive unnoticed.
+    - path: ".coderabbit.yaml"
+      instructions: |
+        Apply the leak check from the `**/*` instruction here too. That
+        pattern cannot reach this path: minimatch defaults to dot: false, so
+        a wildcard never matches a leading dot, and the highest-priority rule
+        in this file would otherwise skip it.
+
+        This file is a plausible leak site in its own right, since a config
+        header is a natural place to explain a wider setup. Flag any reference
+        to another repository, to account-wide activity, or to anything
+        describing the maintainer's broader environment rather than this
+        repository.
+
+        Otherwise check the config's own traps: a `path_filters` or
+        `path_instructions` entry ending in `/**` matches directory paths
+        rather than files and so applies to nothing, a wildcard cannot match a
+        leading dot, and `tone_instructions` has a 250-character limit above
+        which the whole file is rejected and the repository silently falls
+        back to defaults.
+    - path: ".github/**/*"
+      instructions: |
+        Apply the leak check from the `**/*` instruction here too. That
+        pattern cannot reach this path: minimatch defaults to dot: false, so
+        a wildcard never matches a leading dot, and the highest-priority rule
+        in this file would otherwise skip it.
+
+        Runner labels, organization names, internal URLs and self-hosted
+        runner hostnames are the likely forms here.
+
+        Flag `pull_request_target` combined with checkout of untrusted code,
+        actions pinned to mutable tags rather than commit SHAs, and missing
+        least-privilege `permissions:` blocks. The workflow currently sets
+        `permissions: contents: read` and `persist-credentials: false`; flag
+        any widening of either. Flag a change that weakens the gate, such as
+        lowering the shellcheck severity or dropping the syntax check.
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+
+  pre_merge_checks:
+    title:
+      mode: "off"
+    description:
+      mode: "off"
+    docstrings:
+      mode: "off"
+
+  tools:
+    shellcheck:
+      enabled: true       # setup.sh, statusline.sh, config/claude-proj.zsh
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: true
+    semgrep:
+      enabled: true
+    actionlint:
+      enabled: true       # .github/workflows/ci.yml
+    # Left ON here, unlike every other repo on this account. This is published
+    # prose that strangers read as a starting point, so presentation defects
+    # cost more than the noise they add across 8 markdown files.
+    markdownlint:
+      enabled: true
+    languagetool:
+      enabled: false      # style opinions on someone else's fill-in template
+
+chat:
+  art: false
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  code_guidelines:
+    enabled: true
+    # The template's own example config is the closest thing to a guidelines
+    # document here, and it is what the repository is teaching.
+    filePatterns:
+      - "claude/CLAUDE.example.md"
+      - "README.md"
+  learnings:
+    scope: "local"
+  pull_requests:
+    scope: "local"
