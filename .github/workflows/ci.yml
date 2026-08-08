@@ -23,14 +23,51 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y shellcheck zsh
 
-      - name: shellcheck setup.sh
-        run: shellcheck --severity=style setup.sh
+      # Every bash script shipped here, not just setup.sh. The hooks and the
+      # status line were unlinted while being the parts that run on every
+      # session, write and prompt render, and two of the hooks are the secret
+      # scanners. Globbed rather than listed so a new script is covered on
+      # arrival.
+      #
+      # The guard tests the ONLY array that can be empty, the glob's own, and
+      # tests it two ways. Counting a list that also holds literals cannot work:
+      # with claude/hooks/ emptied, `(setup.sh claude/statusline.sh
+      # claude/hooks/*.sh)` measures 3 under default bash (the glob stays
+      # literal) and 2 under nullglob, so a count-is-zero test never fires and
+      # the nullglob case silently lints two files and reports green. The `-e`
+      # test is what catches the literal case, rather than relying on shellcheck
+      # to happen to error on a filename that does not exist.
+      - name: shellcheck bash scripts
+        run: |
+          set -euo pipefail
+          hooks=(claude/hooks/*.sh)
+          if [ ${#hooks[@]} -eq 0 ] || [ ! -e "${hooks[0]}" ]; then
+            echo "::error::no hook scripts matched, the glob is wrong"
+            exit 1
+          fi
+          files=(setup.sh claude/statusline.sh "${hooks[@]}")
+          printf 'linting %s\n' "${files[@]}"
+          shellcheck --severity=style "${files[@]}"
 
       - name: bash -n (syntax)
-        run: bash -n setup.sh
+        run: |
+          set -euo pipefail
+          hooks=(claude/hooks/*.sh)
+          if [ ${#hooks[@]} -eq 0 ] || [ ! -e "${hooks[0]}" ]; then
+            echo "::error::no hook scripts matched, the glob is wrong"
+            exit 1
+          fi
+          for f in setup.sh claude/statusline.sh "${hooks[@]}"; do
+            bash -n "$f"
+          done
 
       - name: zsh -n (syntax)
         run: zsh -n config/claude-proj.zsh
+
+      # A broken example config is a bad first experience for anyone following
+      # the install steps, and it is one command to prevent.
+      - name: settings.example.json is valid JSON
+        run: python3 -m json.tool claude/settings.example.json > /dev/null
 
       # The shipped default must stay 'off'. A public repo should not turn
       # every cloner's terminal scrollback into a plaintext file on disk.
