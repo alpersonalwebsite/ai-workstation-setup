@@ -43,10 +43,14 @@ resumable, which is the point of everything below.
   Since `dark` is already the default, setting it is explicitness rather than a
   change; `auto` is the one to use if you want it to follow the system appearance.
 
-My `~/.claude/` hooks (secret-scanning, gitignore validation) and per-project
-scaffolding are not shipped here; they live in a separate dotfiles repo managed
-with GNU Stow. Starting-point templates for the global instructions and skills
-do ship here, see [Claude Code config and skills](#claude-code-config-and-skills).
+The hooks that enforce this posture (secret-scanning, gitignore validation) now
+ship here too, along with a settings file that wires them, the status line, the
+skills, and a subagent: see
+[Claude Code config and skills](#claude-code-config-and-skills). What does not
+ship is anything personal, my own instructions, examples, and memory, which is
+also why the copies here are templates to adapt rather than a mirror of my
+machine. Keeping your filled-in versions in a dotfiles repo is covered under
+[Keep `~/.claude` in a dotfiles repo with GNU Stow](#keep-claude-in-a-dotfiles-repo-with-gnu-stow).
 
 ## Terminal
 
@@ -685,6 +689,37 @@ separate from the shell and display config so it can grow as you add skills.
   cost, and git branch. Copy it to `~/.claude/statusline.sh`, `chmod +x`, and add
   the `statusLine` key to `settings.json` (see
   [Cost and usage visibility](#cost-and-usage-visibility)). jq only, no network.
+- [`claude/settings.example.json`](../claude/settings.example.json) wires the
+  hooks and the status line below, plus the three keys under
+  [Claude Code settings](#claude-code-settings). Copy it to
+  `~/.claude/settings.json`, or merge the parts you want into a file you already
+  have. `.example` for the same reason as `CLAUDE.example.md`: a live
+  `settings.json` in this repo would apply to anyone working here.
+  It deliberately sets **no `permissions.allow`**, since a permission grant
+  shipped without its reasoning is worse than no grant; see
+  [Security notes](#security-notes) before adding any.
+- [`claude/hooks/`](../claude/hooks/) holds four hook scripts. Hooks are where
+  security posture stops being advice and starts being enforcement, since they run
+  whether or not Claude decides to cooperate. Copy them to `~/.claude/hooks/`,
+  `chmod +x`, and wire them with the settings file above.
+  - `validate-gitignore.sh` (**SessionStart**) warns when the project's
+    `.gitignore` is missing or lacks the patterns that keep secrets and build junk
+    out of git. It strips comment lines first, so a comment mentioning `.env` does
+    not satisfy the check for it.
+  - `gitleaks-check.sh` (**PostToolUse** on Write and Edit) runs `gitleaks` on the
+    file just written and **exits 2 to block** on a hit. Skips `.md`, `.toml` and
+    lock files, where prose and pattern examples cause false positives.
+  - `scan-claude-writes.sh` (**PostToolUse**) scans files written inside
+    `~/.claude/` itself, since instructions and memory are a place secrets get
+    pasted. Warn-only by default; the script says which line to change to block.
+  - `check-uncommitted.sh` (**Stop**) warns at session end when the working tree
+    has uncommitted changes, naming the repo and counting modified versus
+    untracked. Never blocks.
+
+  All four read their event JSON from stdin and need **`jq`**. The two scanners
+  need **`gitleaks`**, and are guarded with `command -v`, so they no-op silently
+  rather than failing if it is absent. Exit code 2 is the blocking one: only
+  `gitleaks-check.sh` uses it, and only on a real finding.
 - [`claude/skills/`](../claude/skills/) holds one folder per skill. Each is a
   `SKILL.md` that Claude invokes when a task matches its description.
   - [`writing-voice`](../claude/skills/writing-voice/) captures your writing
