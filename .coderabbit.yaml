@@ -143,21 +143,30 @@ reviews:
     - "config/**/*"
     - "docs/**/*"
     - ".github/**/*"
-    # One fact, two patterns: under minimatch's dot: false default a wildcard
-    # does not cross a leading dot, and that applies to the FINAL segment as
-    # much as to a directory segment. `.github/**/*` above names the only
-    # dot-directory that exists today, so neither case is covered generally.
-    #   `**/.*/**/*`  files under any dot-directory (a later `.vscode/`,
-    #                 `.devcontainer/`, `.husky/`)
-    #   `**/.*`       dotfiles at any depth, which the trailing `*` above
-    #                 cannot match: `docs/.vale.ini`, `config/.editorconfig`,
-    #                 and also `.github/.keep` inside a dot-directory
-    # Both measured before adding them: each of those five paths matched none
-    # of these filters, so it would have been silently unreviewed and would
-    # have escaped the leak instruction. `**/.*` also matches root dotfiles, so
-    # the `.*` below is belt-and-braces rather than the only cover.
+    # DOT COVERAGE IS PER-POSITION, and that is a limitation rather than a
+    # solved problem. Under minimatch's dot: false default a wildcard does not
+    # cross a leading dot, in the final segment as much as in a directory
+    # segment, so every dot position needs its own literal `.` in the pattern
+    # and no finite set covers arbitrary nesting. Measured with the `minimatch`
+    # package directly, which is the matcher that decides this, rather than with
+    # a filesystem glob, whose dot handling differs and gave the wrong answer:
+    #   `**/.*/**/*`  a non-dot file under a dot-directory
+    #                 (`.github/workflows/ci.yml`, a later `.vscode/settings.json`)
+    #   `**/.*`       a dotfile at any depth whose parents are all non-dot
+    #                 (`.gitignore`, `docs/.vale.ini`, `config/.editorconfig`)
+    #   `.*/.*`       a dotfile directly inside a dot-directory (`.github/.keep`)
+    #   `.*/**/.*`    a dotfile deeper inside one (`.github/workflows/.hidden.yml`)
+    # NOT reachable: a dotfile under NESTED dot-directories, e.g.
+    # `.github/.config/.keep`, which matched none of the patterns tried,
+    # `**/.*/**/.*` included. Add an explicit entry if such a path ever appears.
+    # Note `.github/**/*` above does NOT cover `.github/.keep` either, for the
+    # same reason, which is why these are not redundant with it.
+    # The backstop for all of this is `tone_instructions`, which applies to every
+    # review regardless of path, and already carries the leak framing.
     - "**/.*/**/*"
     - "**/.*"
+    - ".*/.*"
+    - ".*/**/.*"
     # Root level, matched by pattern rather than enumerated. A single `*`
     # matches one segment, so it covers root files only, and `.*` covers root
     # dotfiles, which `*` cannot reach under minimatch's dot: false default.
@@ -199,27 +208,41 @@ reviews:
     # every dotfile. Named explicitly for that reason, not for emphasis.
     - path: "**/.*"
       instructions: |
-        Dotfiles at ANY depth, not only at the root. The `**/*` instruction
-        above cannot reach them: minimatch defaults to dot: false, so no
-        wildcard matches a leading dot, and that holds for the final segment as
-        much as for a directory. So `docs/.vale.ini`, `config/.editorconfig`
-        and `.github/.keep` all need this entry, and it covers the class rather
-        than the dotfiles that happened to exist when this file was written.
+        A dotfile at any depth whose parent directories are all non-dot:
+        `.gitignore`, `docs/.vale.ini`, `config/.editorconfig`. The `**/*`
+        instruction above cannot reach them, since minimatch defaults to
+        dot: false and no wildcard crosses a leading dot, in the final segment
+        as much as in a directory. A dotfile inside a dot-directory needs a
+        different pattern again and has its own entries below; see the
+        path_filters comment for the full per-position breakdown.
 
         Apply the full leak check here. Config and tooling dotfiles are a
         common place for a real path, a machine-specific setting, or a private
         repository name to appear in a rule written for one person's machine.
     - path: "**/.*/**/*"
       instructions: |
-        Files inside a dot-directory, which `**/*` cannot reach either, for the
-        same reason: the wildcard does not cross a leading dot. `.github/**/*`
-        below covers the only such directory today, so this entry exists for
-        the class, and a later `.vscode/`, `.devcontainer/` or `.husky/`
-        inherits the leak check rather than arriving uninstructed.
+        A non-dot file inside a dot-directory (`.github/workflows/ci.yml`, a
+        later `.vscode/settings.json`), which `**/*` cannot reach either, for
+        the same reason. This covers the class, so a later `.vscode/`,
+        `.devcontainer/` or `.husky/` inherits the leak check rather than
+        arriving uninstructed.
 
         Apply the full leak check here. Editor and tooling directories are a
         likely place for an absolute path under a real home directory, a
         machine-specific setting, or a private repository name.
+    - path: ".*/.*"
+      instructions: |
+        A dotfile directly inside a dot-directory, such as `.github/.keep`.
+        Neither `**/.*` nor `.github/**/*` reaches this shape, both stop at a
+        leading dot, so it needs its own literal pattern.
+
+        Apply the full leak check here.
+    - path: ".*/**/.*"
+      instructions: |
+        A dotfile deeper inside a dot-directory, such as
+        `.github/workflows/.hidden.yml`. Same reason as the entry above.
+
+        Apply the full leak check here.
     - path: ".gitignore"
       instructions: |
         Apply the leak check from the `**/*` instruction here too: this file is
