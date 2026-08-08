@@ -143,13 +143,21 @@ reviews:
     - "config/**/*"
     - "docs/**/*"
     - ".github/**/*"
-    # Files under ANY dot-directory, present or future. `.github/**/*` above
-    # names the only one that exists today, and `**/*` cannot reach it: a
-    # wildcard does not cross a leading dot under minimatch's dot: false
-    # default. Without this, a later `.vscode/`, `.devcontainer/` or `.husky/`
-    # is silently unreviewed, leak instruction included. Measured: with the
-    # pattern absent, `.vscode/settings.json` matched none of these filters.
+    # One fact, two patterns: under minimatch's dot: false default a wildcard
+    # does not cross a leading dot, and that applies to the FINAL segment as
+    # much as to a directory segment. `.github/**/*` above names the only
+    # dot-directory that exists today, so neither case is covered generally.
+    #   `**/.*/**/*`  files under any dot-directory (a later `.vscode/`,
+    #                 `.devcontainer/`, `.husky/`)
+    #   `**/.*`       dotfiles at any depth, which the trailing `*` above
+    #                 cannot match: `docs/.vale.ini`, `config/.editorconfig`,
+    #                 and also `.github/.keep` inside a dot-directory
+    # Both measured before adding them: each of those five paths matched none
+    # of these filters, so it would have been silently unreviewed and would
+    # have escaped the leak instruction. `**/.*` also matches root dotfiles, so
+    # the `.*` below is belt-and-braces rather than the only cover.
     - "**/.*/**/*"
+    - "**/.*"
     # Root level, matched by pattern rather than enumerated. A single `*`
     # matches one segment, so it covers root files only, and `.*` covers root
     # dotfiles, which `*` cannot reach under minimatch's dot: false default.
@@ -189,12 +197,14 @@ reviews:
     # `**/*` above does NOT reach .gitignore: minimatch defaults to dot: false
     # and a wildcard cannot match a leading dot, so the leak instruction skips
     # every dotfile. Named explicitly for that reason, not for emphasis.
-    - path: ".*"
+    - path: "**/.*"
       instructions: |
-        Root-level dotfiles. The `**/*` instruction above cannot reach them:
-        minimatch defaults to dot: false, so no wildcard matches a leading
-        dot. This entry exists so the leak check covers the class rather than
-        only the dotfiles that happened to exist when this file was written.
+        Dotfiles at ANY depth, not only at the root. The `**/*` instruction
+        above cannot reach them: minimatch defaults to dot: false, so no
+        wildcard matches a leading dot, and that holds for the final segment as
+        much as for a directory. So `docs/.vale.ini`, `config/.editorconfig`
+        and `.github/.keep` all need this entry, and it covers the class rather
+        than the dotfiles that happened to exist when this file was written.
 
         Apply the full leak check here. Config and tooling dotfiles are a
         common place for a real path, a machine-specific setting, or a private
