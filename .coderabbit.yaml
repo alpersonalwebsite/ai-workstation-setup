@@ -93,10 +93,14 @@ reviews:
   auto_review:
     enabled: false
 
-    # Opt-in path. Per the schema, when `enabled` is false a positive label
-    # match triggers a review. Secondary to `@coderabbitai review`, which is
-    # the primary trigger here. UNVERIFIED against this account: confirm on
-    # the first labeled PR that a review actually posts.
+    # Opt-in path, and CONFIRMED working on this account. Per the schema, when
+    # `enabled` is false a positive label match triggers a review; measured on
+    # this repository's PR #28, where adding the label moved the status row from
+    # `Review skipped: excluded by label configuration` to `Review in progress`
+    # and a review with one actionable finding then posted. Note the row ends up
+    # reading `Review skipped: automatic reviews are disabled` even with that
+    # review present, so read the review count rather than the row.
+    # Still secondary to `@coderabbitai review`, which is the primary trigger.
     labels:
       - "review"
 
