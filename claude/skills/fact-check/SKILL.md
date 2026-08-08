@@ -27,15 +27,23 @@ semantics, CLI behavior, or system state. For each one:
    the installed package, check `--help`, fetch the official doc. Prefer the
    local toolchain over the web when the fact is checkable locally.
 3. Show the command and its output.
+4. Ask what the evidence actually exercises. Shown tool output is not enough on its
+   own: the question is whether the thing under test was real. Feeding invented
+   inputs to a real library or system is evidence. A fixture, sample, mock, or stub
+   standing in for the real system is not, and a test passing against one proves
+   only that the code reads its own input. Where the only support for a claim about
+   the outside world is an artifact built to illustrate it, that claim is
+   UNVERIFIABLE, however green the test was.
 
 ## Report
 
 Classify every claim, most consequential first:
 
-- **VERIFIED**: with the command or output that backs it.
+- **VERIFIED**: with the command or output that backs it, against the real thing.
 - **FALSE**: contradicted, with the evidence and the correction.
-- **UNVERIFIABLE**: could not check with the tools at hand. Say so plainly. Do
-  not upgrade it to verified.
+- **UNVERIFIABLE**: could not check with the tools at hand, or the only evidence
+  available was something built to demonstrate the claim. Say so plainly. Do not
+  upgrade it to verified.
 
 Then flag any claim already written into a durable artifact (comment, commit, PR)
 that is FALSE or UNVERIFIABLE, since those do the real damage, and propose the
