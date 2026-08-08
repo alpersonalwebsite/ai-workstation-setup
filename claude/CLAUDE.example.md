@@ -22,6 +22,13 @@ in context. The rules below are a sensible starting point. Adapt them to you.
   regression.
 - Brevity never drops verification status. Keep measured separate from inferred,
   even when summarizing.
+- Self-authored inputs are fine; self-authored stand-ins are not. The test is
+  whether the thing under test is real, not whether you chose the input. Probing a
+  real library or system with values you invented is evidence. A fixture standing
+  in for the real system is not, and a test passing against it proves only that the
+  code reads your own file. When a claim about the outside world rests on an
+  artifact you built to illustrate it, treat it as unverified: find a real instance,
+  or say plainly that none was found.
 - For a deliberate pre-ship check of a claim-heavy artifact, run the
   `/fact-check` skill (see `skills/fact-check/SKILL.md`).
 
