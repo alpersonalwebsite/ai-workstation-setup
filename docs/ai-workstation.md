@@ -737,6 +737,12 @@ separate from the shell and display config so it can grow as you add skills.
   - [`rca`](../claude/skills/rca/) drafts an incident root-cause analysis in a
     finding / evidence / fix shape, separating measured from inferred and keeping
     hosts, clients, and incident detail out of anything committed. Manual only.
+  - [`sync-config-docs`](../claude/skills/sync-config-docs/) checks whether the
+    prose describing your config still matches the config, reporting content
+    drift, undocumented files, and docs pointing at files that no longer exist.
+    **Ships as a template**: fill in the two paths at the top first, and skip it
+    entirely if you keep no separate documentation, since it would have nothing to
+    compare.
 - [`claude/agents/`](../claude/agents/) holds subagents: workers Claude delegates
   to that run in their own context and return a summary. The one here,
   [`code-reviewer`](../claude/agents/code-reviewer.md), reviews a diff or PR for
@@ -749,8 +755,9 @@ separate from the shell and display config so it can grow as you add skills.
   do not run it from a permission-bypassing session. Copy it into
   `~/.claude/agents/`.
 
-To install a skill, fill in any bracketed placeholders first (`writing-voice` is
-a template to complete; `fact-check` and `fill-claude-md` are ready as-is), then
+To install a skill, fill in any bracketed placeholders first (`writing-voice` and
+`sync-config-docs` are templates to complete; `fact-check`, `fill-claude-md` and
+`rca` are ready as-is), then
 copy the folder into `~/.claude/skills/`. A template copied with its placeholders
 still matches its description, so Claude would load the empty prompts as
 guidance, which is worse than not having the skill at all. Both your
