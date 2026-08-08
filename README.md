@@ -24,6 +24,8 @@ This is a personal collection rather than a framework. Take what is useful.
 | [`claude/skills/`](claude/skills/) | Claude Code skills, one folder each (e.g. `writing-voice`) |
 | [`claude/statusline.sh`](claude/statusline.sh) | Status-line script (model, context use, session cost, branch); copy to `~/.claude/statusline.sh` |
 | [`claude/agents/`](claude/agents/) | Claude Code subagents (e.g. `code-reviewer`: diff/PR review, read-only for writes, `Bash`/`WebFetch` still active, see docs); copy to `~/.claude/agents/` |
+| [`claude/hooks/`](claude/hooks/) | Four hook scripts (gitignore check, gitleaks on write, `~/.claude` scan, uncommitted warning); need `jq`, two need `gitleaks` |
+| [`claude/settings.example.json`](claude/settings.example.json) | Wires the hooks and status line; copy to `~/.claude/settings.json` or merge into yours |
 
 ## Quick start (macOS)
 
@@ -47,8 +49,9 @@ why it is there.
 Then open a shell and run `proj` to fuzzy-pick a project, or `initclaude` inside
 a project folder to scaffold a `CLAUDE.md`.
 
-The [`claude/`](claude/) templates (global instructions, a status line, skills,
-and subagents) are not installed by `setup.sh`; copy them into `~/.claude/` by
+The [`claude/`](claude/) templates (global instructions, settings, hooks, a status
+line, skills, and subagents) are not installed by `setup.sh`; copy them into
+`~/.claude/` by
 hand. See
 [Claude Code config and skills](docs/ai-workstation.md#claude-code-config-and-skills).
 
