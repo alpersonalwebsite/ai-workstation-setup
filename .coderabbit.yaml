@@ -160,9 +160,14 @@ reviews:
     #                 (`.gitignore`, `docs/.vale.ini`, `config/.editorconfig`)
     #   `.*/.*`       a dotfile directly inside a dot-directory (`.github/.keep`)
     #   `.*/**/.*`    a dotfile deeper inside one (`.github/workflows/.hidden.yml`)
-    # NOT reachable: a dotfile under NESTED dot-directories, e.g.
-    # `.github/.config/.keep`, which matched none of the patterns tried,
-    # `**/.*/**/.*` included. Add an explicit entry if such a path ever appears.
+    # Not reached by anything here: a dotfile under NESTED dot-directories, e.g.
+    # `.github/.config/.keep`. It is not unreachable in principle, `.*/.*/.*`
+    # matches it, and `.*/.*/.*/.*` matches three levels, which is exactly the
+    # problem: each extra depth needs one more pattern, so no finite set covers
+    # arbitrary nesting and none of them is added here for a path that does not
+    # exist. Add an explicit entry if one ever appears. Note `**/.*/**/.*`, the
+    # shape that looks like it should cover this, does not: measured false for
+    # `.github/.config/.keep` both on its own and added to the full list above.
     # Note `.github/**/*` above does NOT cover `.github/.keep` either, for the
     # same reason, which is why these are not redundant with it.
     # The backstop for all of this is `tone_instructions`, which applies to every
