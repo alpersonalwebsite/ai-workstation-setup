@@ -720,7 +720,80 @@ copy the folder into `~/.claude/skills/`. A template copied with its placeholder
 still matches its description, so Claude would load the empty prompts as
 guidance, which is worse than not having the skill at all. Both your
 `~/.claude/CLAUDE.md` and the skills are good candidates for a dotfiles repo so
-they restore on a new machine.
+they restore on a new machine. The next section is how to do that without copying
+anything twice.
+
+### Keep `~/.claude` in a dotfiles repo with GNU Stow
+
+Copying these files into `~/.claude/` works once. The problem is the second
+machine, and the fact that `~/.claude/` is where you will keep editing them, so
+the copy in your repo goes stale the moment you tune a skill in place.
+
+[GNU Stow](https://www.gnu.org/software/stow/) fixes that by inverting it: the
+files live in a git repo and Stow **symlinks** them into `~/`. You edit
+`~/.claude/CLAUDE.md`, you are editing the file in the repo, so `git status` sees
+it and a new machine is one `stow` away.
+
+```bash
+brew install stow
+mkdir -p ~/dotfiles/claude
+```
+
+Inside the repo, mirror the path the files should take **relative to your home
+directory**. That mirroring is the whole trick, Stow reads the directory layout as
+the install plan:
+
+```text
+~/dotfiles/                 <- a git repo
+└── claude/                 <- one "package", named for what it configures
+    └── .claude/            <- becomes ~/.claude/
+        ├── CLAUDE.md
+        ├── settings.json
+        ├── statusline.sh
+        ├── agents/
+        ├── hooks/
+        └── skills/
+```
+
+Then link it, from the directory that holds the packages:
+
+```bash
+cd ~/dotfiles
+stow --target="$HOME" claude      # creates the symlinks
+stow --target="$HOME" --delete claude   # removes them again
+stow --target="$HOME" --restow claude   # after adding new files
+```
+
+`--target="$HOME"` is worth passing explicitly. Stow defaults to the *parent* of
+the current directory, which is `$HOME` only when the repo sits directly in your
+home directory; being explicit means the command behaves the same wherever the
+repo lives.
+
+Things worth knowing before you commit to it:
+
+- **Stow refuses to clobber a real file.** If `~/.claude/CLAUDE.md` already
+  exists as a regular file, stowing aborts rather than overwriting: *"cannot stow
+  ... over existing target ... since neither a link nor a directory and --adopt
+  not specified. All operations aborted."* Move your existing config into the
+  package first, then stow. `--adopt` exists and does the opposite of what the
+  name suggests you want: it pulls the existing file **into your repo**,
+  overwriting the repo's version with the one from `~/`. Useful for the initial
+  migration, destructive if you reach for it to resolve a conflict later.
+- **It folds directories.** If `~/.claude/` does not exist, Stow may symlink the
+  whole directory rather than each file in it, which is tidier but means a tool
+  writing a *new* file into `~/.claude/` writes it into your repo. That is usually
+  what you want here, and it is why `git status` catches config Claude Code adds
+  on its own.
+- **Not everything belongs in the package.** `~/.claude/projects/` holds session
+  transcripts and auto-memory, which are machine-local and often contain pasted
+  detail you would not commit. Keep them out, and make sure the repo's
+  `.gitignore` says so.
+- **The repo is as public as you make it.** A dotfiles repo holding Claude
+  instructions, hooks and skills is fine to keep private, and it costs nothing to
+  do so. If you publish it, read every file first: instructions accumulate
+  examples, and examples accumulate real names, hosts and paths.
+- **One package or many.** `claude/` beside `zsh/`, `git/`, `ssh/` keeps each tool
+  separable, so you can stow only what a given machine needs.
 
 ### Cost and usage visibility
 
