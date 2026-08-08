@@ -27,25 +27,37 @@ jobs:
       # status line were unlinted while being the parts that run on every
       # session, write and prompt render, and two of the hooks are the secret
       # scanners. Globbed rather than listed so a new script is covered on
-      # arrival. A glob matching nothing fails loudly either way: under default
-      # bash it stays literal and shellcheck errors on the missing file, and the
-      # count check below covers the case where nullglob is set and it would
-      # expand to nothing at all.
+      # arrival.
+      #
+      # The guard tests the ONLY array that can be empty, the glob's own, and
+      # tests it two ways. Counting a list that also holds literals cannot work:
+      # with claude/hooks/ emptied, `(setup.sh claude/statusline.sh
+      # claude/hooks/*.sh)` measures 3 under default bash (the glob stays
+      # literal) and 2 under nullglob, so a count-is-zero test never fires and
+      # the nullglob case silently lints two files and reports green. The `-e`
+      # test is what catches the literal case, rather than relying on shellcheck
+      # to happen to error on a filename that does not exist.
       - name: shellcheck bash scripts
         run: |
           set -euo pipefail
-          files=(setup.sh claude/statusline.sh claude/hooks/*.sh)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "::error::no shell scripts matched, the glob is wrong"
+          hooks=(claude/hooks/*.sh)
+          if [ ${#hooks[@]} -eq 0 ] || [ ! -e "${hooks[0]}" ]; then
+            echo "::error::no hook scripts matched, the glob is wrong"
             exit 1
           fi
+          files=(setup.sh claude/statusline.sh "${hooks[@]}")
           printf 'linting %s\n' "${files[@]}"
           shellcheck --severity=style "${files[@]}"
 
       - name: bash -n (syntax)
         run: |
           set -euo pipefail
-          for f in setup.sh claude/statusline.sh claude/hooks/*.sh; do
+          hooks=(claude/hooks/*.sh)
+          if [ ${#hooks[@]} -eq 0 ] || [ ! -e "${hooks[0]}" ]; then
+            echo "::error::no hook scripts matched, the glob is wrong"
+            exit 1
+          fi
+          for f in setup.sh claude/statusline.sh "${hooks[@]}"; do
             bash -n "$f"
           done
 
