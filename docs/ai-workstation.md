@@ -760,10 +760,19 @@ separate from the shell and display config so it can grow as you add skills.
   | User types the slash command | the flagged one loads |
   | A model-initiated call, *same session*, after the user already invoked it | **refused** |
 
-  The refusal reads `Skill <name> cannot be used with Skill tool due to
-  disable-model-invocation. Ask the user to run /<name> themselves.` So the flag
-  blocks the tool call unconditionally, and an earlier invocation by the user does
-  not unlock it for the rest of the session. Typing `/<name>` is the only way in.
+  The refusal reads, in full:
+
+  > Skill `<name>` cannot be used with Skill tool due to
+  > disable-model-invocation. Ask the user to run `/<name>` themselves — it cannot
+  > be invoked via the Skill tool. Do not replicate this skill's workflow by other
+  > means — it is reserved for explicit user invocation.
+
+  (Quoted verbatim, so the two em dashes are the tool's own. A style sweep should
+  leave them alone.) So the flag blocks the tool call unconditionally, and an
+  earlier invocation by the user does not unlock it for the rest of the session.
+  Typing `/<name>` is the only way in. Note the last sentence: the intended
+  response to the refusal is to ask for the slash command, not to reproduce the
+  skill's steps by hand.
 
   That is the intent for these four, since each is a moment to choose rather than a
   condition to detect: a pre-ship fact check, a `CLAUDE.md` fill, an incident
