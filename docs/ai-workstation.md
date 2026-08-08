@@ -721,7 +721,10 @@ separate from the shell and display config so it can grow as you add skills.
   rather than failing if it is absent. Exit code 2 is the blocking one: only
   `gitleaks-check.sh` uses it, and only on a real finding.
 - [`claude/skills/`](../claude/skills/) holds one folder per skill. Each is a
-  `SKILL.md` that Claude invokes when a task matches its description.
+  `SKILL.md` that Claude invokes when a task matches its description, unless it
+  opts out with `disable-model-invocation: true`. That opt-out is what **manual
+  only** means below, and it is stronger than the name suggests, so read the note
+  that follows the five skills before copying them.
   - [`writing-voice`](../claude/skills/writing-voice/) captures your writing
     voice across professional and personal registers so drafts sound like you.
     It ships as a template.
@@ -743,6 +746,45 @@ separate from the shell and display config so it can grow as you add skills.
     **Ships as a template**: fill in the two paths at the top first, and skip it
     entirely if you keep no separate documentation, since it would have nothing to
     compare.
+
+  **What "manual only" actually does.**
+  Four of the five skills above carry `disable-model-invocation: true`:
+  `fact-check`, `fill-claude-md`, `rca` and `sync-config-docs`. The name reads as
+  though it only suppresses *automatic* loading, leaving a deliberate call
+  available. It does not. Measured against the loader on Claude Code 2.1.226 with
+  two throwaway skills, one flagged and one not:
+
+  | what happens | result |
+  |---|---|
+  | Asked in prose to use both skills | only the **unflagged** one loads |
+  | User types the slash command | the flagged one loads |
+  | A model-initiated call, *same session*, after the user already invoked it | **refused** |
+
+  The refusal reads, in full:
+
+  > Skill `<name>` cannot be used with Skill tool due to
+  > disable-model-invocation. Ask the user to run `/<name>` themselves — it cannot
+  > be invoked via the Skill tool. Do not replicate this skill's workflow by other
+  > means — it is reserved for explicit user invocation.
+
+  (Quoted verbatim, so the two em dashes are the tool's own. A style sweep should
+  leave them alone.) So the flag blocks the tool call unconditionally, and an
+  earlier invocation by the user does not unlock it for the rest of the session.
+  Typing `/<name>` is the only way in. Note the last sentence: the intended
+  response to the refusal is to ask for the slash command, not to reproduce the
+  skill's steps by hand.
+
+  That is the intent for these four, since each is a moment to choose rather than a
+  condition to detect: a pre-ship fact check, a `CLAUDE.md` fill, an incident
+  write-up, a docs drift check. `writing-voice` carries no flag, so it applies
+  whenever a task matches its description, which is the point of a voice skill.
+
+  Two practical consequences. Delete the line from any of the four to make it
+  model-invocable. And if a session reports that it *cannot* run one of these, that
+  is the flag working rather than a broken setup, so the answer is to type the
+  slash command rather than to have the session work around it. Working around it
+  also skips the skill's own `allowed-tools` and `disallowed-tools`, which bind an
+  invocation rather than the file's text.
 - [`claude/agents/`](../claude/agents/) holds subagents: workers Claude delegates
   to that run in their own context and return a summary. The one here,
   [`code-reviewer`](../claude/agents/code-reviewer.md), reviews a diff or PR for

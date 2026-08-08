@@ -21,7 +21,7 @@ This is a personal collection rather than a framework. Take what is useful.
 | [`config/tmux.conf`](config/tmux.conf) | tmux configuration (persistent sessions, big scrollback) |
 | [`config/claude-proj.zsh`](config/claude-proj.zsh) | `proj` and `initclaude` shell functions |
 | [`claude/CLAUDE.example.md`](claude/CLAUDE.example.md) | Template global instructions for Claude Code (copy to `~/.claude/CLAUDE.md`) |
-| [`claude/skills/`](claude/skills/) | Claude Code skills, one folder each (e.g. `writing-voice`) |
+| [`claude/skills/`](claude/skills/) | Claude Code skills, one folder each (e.g. `writing-voice`); four are manual only, which blocks Claude from invoking them at all, see docs |
 | [`claude/statusline.sh`](claude/statusline.sh) | Status-line script (model, context use, session cost, branch); copy to `~/.claude/statusline.sh` |
 | [`claude/agents/`](claude/agents/) | Claude Code subagents (e.g. `code-reviewer`: diff/PR review, read-only for writes, `Bash`/`WebFetch` still active, see docs); copy to `~/.claude/agents/` |
 | [`claude/hooks/`](claude/hooks/) | Four hook scripts (gitignore check, gitleaks on write, `~/.claude` scan, uncommitted warning); need `jq`, two need `gitleaks` |
