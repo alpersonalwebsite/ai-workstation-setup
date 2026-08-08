@@ -23,14 +23,39 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y shellcheck zsh
 
-      - name: shellcheck setup.sh
-        run: shellcheck --severity=style setup.sh
+      # Every bash script shipped here, not just setup.sh. The hooks and the
+      # status line were unlinted while being the parts that run on every
+      # session, write and prompt render, and two of the hooks are the secret
+      # scanners. Globbed rather than listed so a new script is covered on
+      # arrival. A glob matching nothing fails loudly either way: under default
+      # bash it stays literal and shellcheck errors on the missing file, and the
+      # count check below covers the case where nullglob is set and it would
+      # expand to nothing at all.
+      - name: shellcheck bash scripts
+        run: |
+          set -euo pipefail
+          files=(setup.sh claude/statusline.sh claude/hooks/*.sh)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::no shell scripts matched, the glob is wrong"
+            exit 1
+          fi
+          printf 'linting %s\n' "${files[@]}"
+          shellcheck --severity=style "${files[@]}"
 
       - name: bash -n (syntax)
-        run: bash -n setup.sh
+        run: |
+          set -euo pipefail
+          for f in setup.sh claude/statusline.sh claude/hooks/*.sh; do
+            bash -n "$f"
+          done
 
       - name: zsh -n (syntax)
         run: zsh -n config/claude-proj.zsh
+
+      # A broken example config is a bad first experience for anyone following
+      # the install steps, and it is one command to prevent.
+      - name: settings.example.json is valid JSON
+        run: python3 -m json.tool claude/settings.example.json > /dev/null
 
       # The shipped default must stay 'off'. A public repo should not turn
       # every cloner's terminal scrollback into a plaintext file on disk.
