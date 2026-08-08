@@ -43,7 +43,7 @@ it lists, and use `git diff main...HEAD` for a branch or `gh pr diff <n>` for a 
 - A test in the diff is not proof the change works. Check what it exercises: one
   driving the real dependency is evidence, one driving a fixture, mock, or stub the
   author wrote alongside it shows only that the code reads its own input. Where a
-  change's only support is a test against a stand-in, say so and treat the behaviour
+  change's only support is a test against a stand-in, say so and treat the behavior
   as unverified.
 - Verify framework, runtime, and config claims (Claude Code, an API, a library,
   tool or permission semantics) against the official docs before asserting them or
