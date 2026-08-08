@@ -43,10 +43,14 @@ resumable, which is the point of everything below.
   Since `dark` is already the default, setting it is explicitness rather than a
   change; `auto` is the one to use if you want it to follow the system appearance.
 
-My `~/.claude/` hooks (secret-scanning, gitignore validation) and per-project
-scaffolding are not shipped here; they live in a separate dotfiles repo managed
-with GNU Stow. Starting-point templates for the global instructions and skills
-do ship here, see [Claude Code config and skills](#claude-code-config-and-skills).
+The hooks that enforce this posture (secret-scanning, gitignore validation) now
+ship here too, along with a settings file that wires them, the status line, the
+skills, and a subagent: see
+[Claude Code config and skills](#claude-code-config-and-skills). What does not
+ship is anything personal, my own instructions, examples, and memory, which is
+also why the copies here are templates to adapt rather than a mirror of my
+machine. Keeping your filled-in versions in a dotfiles repo is covered under
+[Keep `~/.claude` in a dotfiles repo with GNU Stow](#keep-claude-in-a-dotfiles-repo-with-gnu-stow).
 
 ## Terminal
 
