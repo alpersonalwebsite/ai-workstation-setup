@@ -22,6 +22,11 @@ in context. The rules below are a sensible starting point. Adapt them to you.
   regression.
 - Brevity never drops verification status. Keep measured separate from inferred,
   even when summarizing.
+- Evidence you authored is not evidence. A fixture, sample, mock, or example
+  written to demonstrate a claim cannot verify it, and a test passing against it
+  proves only that the code reads your own file. When the only support for a claim
+  is something you made, treat it as unverified: find a real instance, or say
+  plainly that none was found.
 - For a deliberate pre-ship check of a claim-heavy artifact, run the
   `/fact-check` skill (see `skills/fact-check/SKILL.md`).
 
