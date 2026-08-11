@@ -52,7 +52,12 @@ if [ -z "$launcher" ]; then
   dir=${CLAUDE_CONFIG_DIR:-}
   case ${dir%/} in
     ''|"$HOME/.claude") launcher=claude ;;
-    *) launcher=${dir%/}; launcher=${launcher##*/}; launcher=${launcher#.} ;;
+    # The last guard is not redundant: a dir ending in `.` (`.`, `~/.`,
+    # `~/.claude/.`, `./`) leaves nothing after the dot is stripped, and a blank
+    # first field opens the bar with two spaces, which reads as a broken script
+    # rather than a mislabeled session.
+    *) launcher=${dir%/}; launcher=${launcher##*/}; launcher=${launcher#.}
+       [ -n "$launcher" ] || launcher=claude ;;
   esac
 fi
 
