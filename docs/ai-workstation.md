@@ -1011,9 +1011,23 @@ does, and the wrapper needs a different approach.
    the wrapper has to tag itself. The status-line script is a child of the
    session process and therefore sees the session's environment. A session
    started through the wrapper renders `claude-extension  [<model>]  ctx …`, and
-   a plain `claude` renders `claude  [<model>]  ctx …`, since the script falls
-   back to `claude` when the variable is unset. Set it in any other wrapper you
-   add, or that wrapper's sessions will read as plain `claude`.
+   a plain `claude` renders `claude  [<model>]  ctx …`.
+
+   Set `CLAUDE_LAUNCHER` in any other wrapper you add. If you forget, the script
+   falls back to deriving the label from `CLAUDE_CONFIG_DIR`, which a
+   second-account wrapper sets anyway: `$HOME/.claude-extension` gives
+   `claude-extension`, and unset or `$HOME/.claude` gives `claude`. The fallback
+   exists because forgetting the tag otherwise fails in the direction that looks
+   correct, printing `claude` for a session that is not one. It labels the
+   **config dir** rather than the command, so two wrappers sharing one dir stay
+   indistinguishable; the explicit tag is what separates those, and wins whenever
+   both are set.
+
+   Both signals come from the environment, and nothing in the documentation
+   promises that Claude Code passes the session environment to the `statusLine`
+   command. If a future build sanitizes it, the field degrades to printing
+   `claude` everywhere, which looks exactly like it working. If the label ever
+   stops tracking the account, suspect that before suspecting your wrapper.
 5. **Log in the second account.**
    ```bash
    claude-extension auth login
