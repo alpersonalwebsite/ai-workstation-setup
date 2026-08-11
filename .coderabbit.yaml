@@ -55,6 +55,7 @@
 # and the instruction below treats a private repository name as a
 # highest-severity leak, so this file's rationale stays about this file.
 
+# fleet-block: exempt - PUBLIC repo; the auto_review banner below is a deliberate trim, carrying no plan details or account volume. See the header above and the owner's CLAUDE.md.
 language: "en-US"
 tone_instructions: "This repo is PUBLIC and is a fill-in template. The costliest finding is a leak: a real name, email, employer, host, home path, or a bracketed placeholder replaced with a real answer. Skip nits shellcheck reports."
 
