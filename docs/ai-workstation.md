@@ -686,8 +686,17 @@ separate from the shell and display config so it can grow as you add skills.
   [per-project `CLAUDE.md`](#a-claudemd-per-project) that `initclaude` scaffolds.
 - [`claude/statusline.sh`](../claude/statusline.sh) is a status-line script:
   Claude Code runs it every turn and it prints the launching command, model,
-  context-window use, session cost, and git branch. Copy it to
-  `~/.claude/statusline.sh`, `chmod +x`, and add
+  context-window use, session cost, and git branch, which renders as:
+  ```text
+  claude-extension  [Opus 5 (1M context)]  ctx 31%  $26.09  ⎇ main
+  ```
+  The first field is the command that started the session: `claude` for a plain
+  run, or the name of a wrapper, see
+  [A second Claude Code account, side by side](#a-second-claude-code-account-side-by-side).
+  Everything left of the branch is 60 characters at that model name, so the line
+  above is 64 and a long branch name pushes it past 90. The branch sits last, so
+  the branch is what a narrow pane cuts; drop a field from the script if you work
+  in narrow splits. Copy it to `~/.claude/statusline.sh`, `chmod +x`, and add
   the `statusLine` key to `settings.json` (see
   [Cost and usage visibility](#cost-and-usage-visibility)). jq only, no network.
 - [`claude/settings.example.json`](../claude/settings.example.json) wires the
