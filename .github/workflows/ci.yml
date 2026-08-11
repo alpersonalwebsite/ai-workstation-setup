@@ -18,10 +18,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install shellcheck and zsh
+      # jq is installed explicitly rather than relied on as a runner default:
+      # statusline.sh hard-requires it, and the launcher assertion below would
+      # otherwise pass or fail for reasons unrelated to this repo's code.
+      - name: Install shellcheck, zsh and jq
         run: |
           sudo apt-get update
-          sudo apt-get install -y shellcheck zsh
+          sudo apt-get install -y shellcheck zsh jq
 
       # Every bash script shipped here, not just setup.sh. The hooks and the
       # status line were unlinted while being the parts that run on every
@@ -68,6 +71,36 @@ jobs:
       # the install steps, and it is one command to prevent.
       - name: settings.example.json is valid JSON
         run: python3 -m json.tool claude/settings.example.json > /dev/null
+
+      # statusline.sh is the one shipped script whose OUTPUT is the product, and
+      # its first field fails in the direction that looks correct: break the
+      # CLAUDE_LAUNCHER/CLAUDE_CONFIG_DIR resolution and every session prints
+      # "claude", which is also the right answer for a plain run. shellcheck
+      # cannot see that, and neither can a reviewer skimming the diff, so assert
+      # the label instead of trusting the code to keep meaning what it says.
+      # The last case is the degenerate one: a config dir ending in a dot leaves
+      # nothing after the dot is stripped, and a blank first field reads as a
+      # broken script rather than a mislabeled session.
+      - name: Assert the status line's launcher field
+        run: |
+          set -euo pipefail
+          json='{"model":{"display_name":"M"},"context_window":{"used_percentage":1},"cost":{"total_cost_usd":0}}'
+          check() {  # $1 expected label, rest: environment for the run
+            got=$(env -u CLAUDE_LAUNCHER -u CLAUDE_CONFIG_DIR "${@:2}" \
+                    bash claude/statusline.sh <<<"$json" | awk '{print $1}')
+            if [ "$got" != "$1" ]; then
+              echo "::error file=claude/statusline.sh::launcher expected [$1], got [$got], for: ${*:2}"
+              exit 1
+            fi
+            printf '  ok  %-18s %s\n' "$1" "${*:2}"
+          }
+          check claude
+          check claude           CLAUDE_CONFIG_DIR="$HOME/.claude"
+          check claude-extension CLAUDE_CONFIG_DIR="$HOME/.claude-extension"
+          check claude-extension CLAUDE_CONFIG_DIR="$HOME/.claude-extension/"
+          check mytag            CLAUDE_LAUNCHER=mytag CLAUDE_CONFIG_DIR="$HOME/.claude-extension"
+          check claude           CLAUDE_LAUNCHER= CLAUDE_CONFIG_DIR="$HOME/.claude"
+          check claude           CLAUDE_CONFIG_DIR=.
 
       # The shipped default must stay 'off'. A public repo should not turn
       # every cloner's terminal scrollback into a plaintext file on disk.
