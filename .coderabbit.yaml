@@ -55,15 +55,13 @@
 # and the instruction below treats a private repository name as a
 # highest-severity leak, so this file's rationale stays about this file.
 #
-# ONE DELIBERATE EXCEPTION, named here so the rule and the file agree rather
-# than the file quietly departing from it. The `# fleet-block: exempt` line
-# below is a machine-readable declaration that this config's auto_review
-# banner is a deliberate variant rather than drift. It is cross-repo BY
-# CONSTRUCTION, since a declaration of sameness-or-difference only means
-# anything if other copies exist. What the rule above is actually protecting
-# still holds: it carries no repository name, no figure, and no rollout state.
-# Without it this file is the one standing failure on every sweep, which is
-# how a real check gets learned and ignored.
+# ONE DELIBERATE EXCEPTION, named so the rule and the file agree rather than
+# the file quietly departing from it. The `fleet-block` exempt line below
+# declares that the auto_review banner is a deliberate variant and not drift,
+# for a consistency check this file's owner runs across their own configs.
+# Such a declaration is cross-repo by construction: it means nothing unless
+# other copies exist. What the rule above protects still holds, since it
+# carries no repository name, no figure and no rollout state.
 
 # fleet-block: exempt - PUBLIC repo; the auto_review banner below is a deliberate trim, not drift. The header above says what it omits and why.
 language: "en-US"
