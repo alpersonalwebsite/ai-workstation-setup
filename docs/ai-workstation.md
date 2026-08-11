@@ -685,8 +685,9 @@ separate from the shell and display config so it can grow as you add skills.
   This is the global config, distinct from the
   [per-project `CLAUDE.md`](#a-claudemd-per-project) that `initclaude` scaffolds.
 - [`claude/statusline.sh`](../claude/statusline.sh) is a status-line script:
-  Claude Code runs it every turn and it prints model, context-window use, session
-  cost, and git branch. Copy it to `~/.claude/statusline.sh`, `chmod +x`, and add
+  Claude Code runs it every turn and it prints the launching command, model,
+  context-window use, session cost, and git branch. Copy it to
+  `~/.claude/statusline.sh`, `chmod +x`, and add
   the `statusLine` key to `settings.json` (see
   [Cost and usage visibility](#cost-and-usage-visibility)). jq only, no network.
 - [`claude/settings.example.json`](../claude/settings.example.json) wires the
@@ -899,6 +900,10 @@ spend with no third-party tool for the common cases:
 
   It reads the session JSON Claude Code pipes on stdin (`model.display_name`,
   `context_window.used_percentage`, `cost.total_cost_usd`) and needs only `jq`.
+  The leading field is not from that JSON: it names the command that started the
+  session, `claude` or a wrapper such as `claude-extension`. See
+  [A second Claude Code account, side by side](#a-second-claude-code-account-side-by-side)
+  for how a wrapper labels itself.
 - **Session, day, week:** `/usage`. It shows the session's token use and a
   locally-estimated cost, and on a subscription plan (Pro, Max, Team, Enterprise)
   a 24h/7d plan-usage breakdown (press `d` / `w`). On API-key auth you get the
@@ -986,7 +991,10 @@ does, and the wrapper needs a different approach.
    `claude-extension` function alongside `proj` and `initclaude`, so `setup.sh`
    installs it for you:
    ```bash
-   claude-extension() { CLAUDE_CONFIG_DIR="$HOME/.claude-extension" claude "$@"; }
+   claude-extension() {
+     CLAUDE_LAUNCHER=claude-extension \
+     CLAUDE_CONFIG_DIR="$HOME/.claude-extension" claude "$@"
+   }
    ```
    Open a new shell (or re-source your zsh config) to pick it up. Keeping it in
    that tracked file, rather than an untracked `~/.zshrc`, is what makes it
@@ -994,6 +1002,18 @@ does, and the wrapper needs a different approach.
    do not pass a literal quoted `"~/..."`. The raw string is hashed into the
    keychain service name, so an inconsistent value across shells points at a
    different keychain item and forces a re-login.
+
+   `CLAUDE_LAUNCHER` is not a Claude Code variable, it is the label
+   [`claude/statusline.sh`](../claude/statusline.sh) prints as the status line's
+   first field, so a glance at the bar says which account the session is on. Both
+   accounts run the same binary and the wrapper is a shell function rather than
+   its own process, so nothing in the process tree or `$0` distinguishes them;
+   the wrapper has to tag itself. The status-line script is a child of the
+   session process and therefore sees the session's environment. A session
+   started through the wrapper renders `claude-extension  [<model>]  ctx …`, and
+   a plain `claude` renders `claude  [<model>]  ctx …`, since the script falls
+   back to `claude` when the variable is unset. Set it in any other wrapper you
+   add, or that wrapper's sessions will read as plain `claude`.
 5. **Log in the second account.**
    ```bash
    claude-extension auth login

@@ -128,6 +128,13 @@ EOF
 #
 # Uses an absolute path deliberately: the raw string is hashed into the macOS
 # keychain service name, so a literal "~/..." would point at a different item.
+#
+# CLAUDE_LAUNCHER is not a Claude Code variable: statusline.sh prints it as the
+# first field, so the bar names the command that started the session, and falls
+# back to "claude" when unset. A wrapper is a shell function rather than its own
+# process, so nothing else tells the two sessions apart on sight; set this in
+# every new wrapper too.
 claude-extension() {
+  CLAUDE_LAUNCHER=claude-extension \
   CLAUDE_CONFIG_DIR="$HOME/.claude-extension" claude "$@"
 }
