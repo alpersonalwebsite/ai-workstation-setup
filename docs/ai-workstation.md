@@ -296,6 +296,37 @@ separate from the shell and display config so it can grow as you add skills.
 (For the `~/.claude/settings.json` keys that keep sessions resumable, see
 [Claude Code settings](#claude-code-settings) above.)
 
+**Copy or Stow, and it is worth choosing before you start.** Each bullet below
+says "copy it to `~/.claude/...`", which is the quick way to try something. The
+way this setup actually runs is
+[GNU Stow](#keep-claude-in-a-dotfiles-repo-with-gnu-stow): the files live in a
+git repo and Stow symlinks them into `~/.claude/`, so an edit is version-controlled
+the moment you make it. Both end with the same paths in `~/.claude/`, so copying
+first costs nothing except moving the same files twice. If you already know you
+want the config tracked, read the Stow section first and come back.
+
+**Then confirm it is live, rather than assuming.** A config file in the right
+place with a typo in it fails silently:
+
+```bash
+# The status line: renders a bar, and needs jq.
+echo '{"model":{"display_name":"Opus 5"},"context_window":{"used_percentage":12},"cost":{"total_cost_usd":0.42}}' \
+  | ~/.claude/statusline.sh
+# -> claude  [Opus 5]  ctx 12%  $0.42  (plus  ⎇ branch  inside a git repo)
+
+# settings.json: valid JSON, status line wired, hooks registered.
+python3 -m json.tool ~/.claude/settings.json > /dev/null && echo "settings.json parses"
+jq -c '.statusLine' ~/.claude/settings.json      # {"type":"command","command":"~/.claude/statusline.sh",...}
+jq -r '.hooks | keys[]' ~/.claude/settings.json  # SessionStart, PostToolUse, Stop
+
+# The hooks need jq; two of them also need gitleaks or they no-op silently.
+command -v jq gitleaks
+```
+
+Inside a session, `/doctor` checks the health of the install; `claude --help`
+documents it for that. A skill that never fires is usually a `description` that
+does not match what you asked for, or the manual-only flag described below.
+
 - [`claude/CLAUDE.example.md`](../claude/CLAUDE.example.md) is a template for the
   global instructions Claude Code loads every session (writing voice, git
   hygiene, security, memory). It carries the `.example` suffix on purpose: a file

@@ -49,10 +49,38 @@ why it is there.
 Then open a shell and run `proj` to fuzzy-pick a project, or `initclaude` inside
 a project folder to scaffold a `CLAUDE.md`.
 
-The [`claude/`](claude/) templates (global instructions, settings, hooks, a status
-line, skills, and subagents) are not installed by `setup.sh`; copy them into
-`~/.claude/` by
-hand. See
+### Check it worked
+
+`setup.sh` is quiet when it succeeds, so confirm rather than assume. In a **new**
+shell, since `proj` and `initclaude` are only defined in shells started after the
+install:
+
+```bash
+tmux -V                  # tmux 3.x
+fzf --version            # a version number, not "command not found"
+type proj initclaude     # both: shell function from ~/.claude-proj.zsh
+ls -d ~/.tmux/plugins/tpm  # the plugin manager was cloned
+```
+
+Inside tmux, `prefix + I` installs the plugins on first run.
+[`config/tmux.conf`](config/tmux.conf) does not remap the prefix, so it is tmux's
+default `Ctrl-b`.
+
+### Getting the `claude/` files into place
+
+Nothing under [`claude/`](claude/) is installed by `setup.sh`. There are two ways
+to place it, and they lead to different places:
+
+- **Copy, to try it out.** Copy the files you want into `~/.claude/`, `chmod +x`
+  the shell scripts, and merge `settings.example.json` into your own
+  `settings.json`. Fastest, and fine while you are deciding what to keep.
+- **Stow, to keep it.** Put the files in a dotfiles repo and let GNU Stow symlink
+  them into `~/.claude/`, so edits are version-controlled and restore on a new
+  machine. This is what the setup actually uses, and it is worth reading before
+  you copy anything, since it saves moving the same files twice:
+  [Keep `~/.claude` in a dotfiles repo with GNU Stow](docs/ai-workstation.md#keep-claude-in-a-dotfiles-repo-with-gnu-stow).
+
+Either way, what each file does and how to check it is live is in
 [Claude Code config and skills](docs/ai-workstation.md#claude-code-config-and-skills).
 
 ## What this fetches
