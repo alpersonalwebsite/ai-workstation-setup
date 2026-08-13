@@ -16,7 +16,10 @@ This is a personal collection rather than a framework. Take what is useful.
 
 | Path | What it is |
 |---|---|
-| [`docs/ai-workstation.md`](docs/ai-workstation.md) | The tools I use, what each is for, and what it replaces |
+| [`docs/ai-workstation.md`](docs/ai-workstation.md) | Index: where to start, prerequisites, habits, security notes |
+| [`docs/terminal.md`](docs/terminal.md) | tmux with session restore, fzf, `proj` and `initclaude`, project workflow, surviving a reboot |
+| [`docs/claude-code.md`](docs/claude-code.md) | Claude Code config, skills, hooks, status line, Stow, cost visibility, two accounts side by side |
+| [`docs/workspace.md`](docs/workspace.md) | Window management, monitor arrangement, lighting, brightness, dark mode |
 | [`setup.sh`](setup.sh) | Idempotent installer for the terminal side of the setup |
 | [`config/tmux.conf`](config/tmux.conf) | tmux configuration (persistent sessions, big scrollback) |
 | [`config/claude-proj.zsh`](config/claude-proj.zsh) | `proj` and `initclaude` shell functions |
@@ -32,11 +35,11 @@ These are the ones worth knowing exist, since they are hard to find by scrolling
 
 | Topic | What it answers |
 |---|---|
-| [A second Claude Code account, side by side](docs/ai-workstation.md#a-second-claude-code-account-side-by-side) | Running two logins at once through `CLAUDE_CONFIG_DIR`, including the env vars that silently collapse the split back into one account |
-| [Keep `~/.claude` in a dotfiles repo with GNU Stow](docs/ai-workstation.md#keep-claude-in-a-dotfiles-repo-with-gnu-stow) | Version-controlling your Claude config instead of copying files by hand |
-| [Cost and usage visibility](docs/ai-workstation.md#cost-and-usage-visibility) | Live session cost, plus day, week and month spend, with nothing third-party on the always-on path |
-| [Claude Code config and skills](docs/ai-workstation.md#claude-code-config-and-skills) | What each file in [`claude/`](claude/) does, and what "manual only" actually blocks |
-| [Surviving a restart](docs/ai-workstation.md#surviving-a-restart) | Getting tmux sessions and working directories back after a reboot |
+| [A second Claude Code account, side by side](docs/claude-code.md#a-second-claude-code-account-side-by-side) | Running two logins at once through `CLAUDE_CONFIG_DIR`, including the env vars that silently collapse the split back into one account |
+| [Keep `~/.claude` in a dotfiles repo with GNU Stow](docs/claude-code.md#keep-claude-in-a-dotfiles-repo-with-gnu-stow) | Version-controlling your Claude config instead of copying files by hand |
+| [Cost and usage visibility](docs/claude-code.md#cost-and-usage-visibility) | Live session cost, plus day, week and month spend, with nothing third-party on the always-on path |
+| [Claude Code config and skills](docs/claude-code.md#claude-code-config-and-skills) | What each file in [`claude/`](claude/) does, and what "manual only" actually blocks |
+| [Surviving a restart](docs/terminal.md#surviving-a-restart) | Getting tmux sessions and working directories back after a reboot |
 
 ## Quick start (macOS)
 
@@ -89,10 +92,10 @@ to place it, and they lead to different places:
   them into `~/.claude/`, so edits are version-controlled and restore on a new
   machine. This is what the setup actually uses, and it is worth reading before
   you copy anything, since it saves moving the same files twice:
-  [Keep `~/.claude` in a dotfiles repo with GNU Stow](docs/ai-workstation.md#keep-claude-in-a-dotfiles-repo-with-gnu-stow).
+  [Keep `~/.claude` in a dotfiles repo with GNU Stow](docs/claude-code.md#keep-claude-in-a-dotfiles-repo-with-gnu-stow).
 
 Either way, what each file does and how to check it is live is in
-[Claude Code config and skills](docs/ai-workstation.md#claude-code-config-and-skills).
+[Claude Code config and skills](docs/claude-code.md#claude-code-config-and-skills).
 
 ## What this fetches
 
