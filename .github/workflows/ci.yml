@@ -160,6 +160,30 @@ jobs:
           fi
           tmux -L ci kill-server 2>/dev/null || true
 
+  anchors:
+    name: Docs anchors resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      # The link job below deliberately skips anything starting with `#`, so it
+      # validates file paths and says nothing about anchors. Two dead anchors in a
+      # table of contents shipped green because of that gap: removing `(+` or `/`
+      # from a heading leaves two adjacent spaces, and GitHub emits a hyphen for
+      # each one, so `#tmux-resurrect-...` never matched a heading whose real id is
+      # `#tmux--resurrect-...`.
+      #
+      # github-slugger is the library GitHub uses, and it is a dependency here on
+      # purpose: the hand-rolled reimplementation of these rules is what produced
+      # the bad anchors AND passed its own verification, since hand-made slugs
+      # checked against hand-made rules agree by construction. Pinned so a rules
+      # change arrives as a deliberate bump.
+      - name: Install github-slugger
+        run: npm install --no-save --no-audit --no-fund github-slugger@2.0.0
+      - name: Every in-repo markdown anchor matches a heading
+        run: node .github/scripts/check-anchors.mjs $(git ls-files '*.md')
+
   links:
     name: Docs links resolve
     runs-on: ubuntu-latest
