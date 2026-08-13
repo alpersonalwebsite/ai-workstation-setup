@@ -27,6 +27,17 @@ This is a personal collection rather than a framework. Take what is useful.
 | [`claude/hooks/`](claude/hooks/) | Four hook scripts (gitignore check, gitleaks on write, `~/.claude` scan, uncommitted warning); need `jq`, two need `gitleaks` |
 | [`claude/settings.example.json`](claude/settings.example.json) | Wires the hooks and status line; copy to `~/.claude/settings.json` or merge into yours |
 
+The longer write-ups live in [`docs/ai-workstation.md`](docs/ai-workstation.md).
+These are the ones worth knowing exist, since they are hard to find by scrolling:
+
+| Topic | What it answers |
+|---|---|
+| [A second Claude Code account, side by side](docs/ai-workstation.md#a-second-claude-code-account-side-by-side) | Running two logins at once through `CLAUDE_CONFIG_DIR`, including the env vars that silently collapse the split back into one account |
+| [Keep `~/.claude` in a dotfiles repo with GNU Stow](docs/ai-workstation.md#keep-claude-in-a-dotfiles-repo-with-gnu-stow) | Version-controlling your Claude config instead of copying files by hand |
+| [Cost and usage visibility](docs/ai-workstation.md#cost-and-usage-visibility) | Live session cost, plus day, week and month spend, with nothing third-party on the always-on path |
+| [Claude Code config and skills](docs/ai-workstation.md#claude-code-config-and-skills) | What each file in [`claude/`](claude/) does, and what "manual only" actually blocks |
+| [Surviving a restart](docs/ai-workstation.md#surviving-a-restart) | Getting tmux sessions and working directories back after a reboot |
+
 ## Quick start (macOS)
 
 ```bash
