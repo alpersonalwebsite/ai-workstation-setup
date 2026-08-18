@@ -1,16 +1,24 @@
 # AI Workstation Setup
 
 Notes, configuration, and tooling for working day to day with an AI coding
-assistant, collected while my team adopted **Spec-Driven Development (SDD)**.
+assistant. What is actually here is the environment around the assistant:
 
-SDD means the specification is the artifact you maintain, not a document you
-write once and abandon. You describe the intended behavior first, the assistant
-implements against that description, and the spec stays the reference you review
-changes against. In practice that shifts most of the effort from typing code to
-writing precise intent and keeping context durable across sessions, which is
-what most of this repo is about.
+- a terminal whose sessions survive closing the window and rebooting the machine
+- Claude Code config you can version-control instead of copying by hand: global
+  instructions, skills, hooks, a status line, a subagent
+- live session cost in the status line, plus day and week from Claude Code
+  itself; month and longer needs one optional third-party tool
+- two Claude Code accounts running side by side from the same project
 
-This is a personal collection rather than a framework. Take what is useful.
+Everything is macOS. This is a personal collection rather than a framework, so
+take what is useful and ignore the rest.
+
+It was collected while my team adopted **Spec-Driven Development (SDD)**, where
+the specification is the artifact you maintain rather than a document you write
+once and abandon. That shifts the effort from typing code toward writing precise
+intent and keeping context durable across sessions, which is what everything
+above supports. The SDD artifacts themselves, the spec templates and the
+walkthrough, are not written up yet: see [Not here yet](#not-here-yet).
 
 ## What is here
 
