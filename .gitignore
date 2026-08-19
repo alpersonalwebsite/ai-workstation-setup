@@ -1,6 +1,10 @@
 # --- Secrets / credentials (never commit) ---
-.env
-.env.*
+# `.env*` is a PREFIX glob: .env, .envrc, .env.local. `*.env` is a SUFFIX
+# glob: audit.env, production.env. Neither implies the other, and `.env.*`
+# (the old form here) missed .envrc outright. The negation must stay BELOW
+# both patterns, or the committed example file stops being tracked.
+.env*
+*.env
 !.env.example
 secrets/
 credentials*
