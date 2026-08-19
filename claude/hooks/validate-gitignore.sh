@@ -84,11 +84,23 @@ fi
 # Committed *.example / *.sample / *.template files are the intended case and are
 # excluded. Measured across 130 repositories: this filter flags the 2 genuine
 # offenders and none of the 7 distinct committed-template shapes.
+#
+# BOTH TESTS ARE SCOPED TO THE BASENAME, and the exclusion especially. Filtering
+# the whole path silently dropped a real secret at `examples/audit.env`, because
+# the directory carries the word: measured, `sierra/audit.env` was reported and
+# `examples/audit.env` was not, from the same commit. examples/, test/samples/ and
+# docs/templates/ are ordinary directory names, and this is the check whose entire
+# job is finding the file nobody meant to commit.
+#
+# tolower() keeps the case-insensitivity the previous `grep -vi` had, so a
+# committed `.env.EXAMPLE` is still treated as a template. It also makes the match
+# side case-insensitive, which is the right default on a case-insensitive
+# filesystem such as macOS's.
 if git -C "$CWD" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if TRACKED=$(git -C "$CWD" ls-files 2>/dev/null); then
     TRACKED_ENV=$(printf '%s\n' "$TRACKED" \
-      | awk -F/ '{ b = $NF } b ~ /^\.env/ || b ~ /\.env$/ { print }' \
-      | grep -viE 'example|sample|template')
+      | awk -F/ '{ b = tolower($NF) }
+                 (b ~ /^\.env/ || b ~ /\.env$/) && b !~ /example|sample|template/ { print }')
     [[ -n "$TRACKED_ENV" ]] && WARNINGS+=("env file(s) already TRACKED, gitignore will not untrack: $(printf '%s' "$TRACKED_ENV" | tr '\n' ' ')")
   else
     # Same rule as above: could not look is not the same as nothing found.
