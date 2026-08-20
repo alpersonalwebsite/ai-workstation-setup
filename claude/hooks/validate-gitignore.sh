@@ -112,12 +112,12 @@ fi
 # THE EXCLUSION IS A SUFFIX, not a substring. `b !~ /example|sample|template/`
 # also swallowed sample.env, myexample.env, template.env and exampleconfig.env,
 # which are ordinary environment-file names. Anchoring to a trailing
-# [.-]example|sample|template keeps all seven committed-template shapes excluded
+# [._-]example|sample|template keeps all seven committed-template shapes excluded
 # (.env-example, .env-sample, .env.example, .env.template and nested variants)
 # while those four are reported again. Measured on both sets.
 #
 # THE PREFIX IS BOUNDED so `.envelope` and `.envtest` are not reported as env
-# files. `(rc)?` is load-bearing and the obvious `^\.env($|[.-])` is wrong: it
+# files. `(rc)?` is load-bearing and the obvious `^\.env($|[._-])` is wrong: it
 # drops `.envrc` and `.envrc.local`, precisely the files this policy exists for.
 #
 # tolower() keeps the case-insensitivity the original `grep -vi` had. Measured by
@@ -129,8 +129,8 @@ elif git -C "$CWD" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if TRACKED=$(git -C "$CWD" ls-files 2>/dev/null); then
     TRACKED_ENV=$(printf '%s\n' "$TRACKED" \
       | awk -F/ '{ b = tolower($NF) }
-                 (b ~ /^\.env(rc)?($|[.-])/ || b ~ /\.env$/) \
-                 && b !~ /[.-](example|sample|template)$/ { print }')
+                 (b ~ /^\.env(rc)?($|[._-])/ || b ~ /\.env$/) \
+                 && b !~ /[._-](example|sample|template)$/ { print }')
     [[ -n "$TRACKED_ENV" ]] && WARNINGS+=("env file(s) already TRACKED, gitignore will not untrack: $(printf '%s' "$TRACKED_ENV" | tr '\n' ' ')")
   else
     # Same rule as above: could not look is not the same as nothing found.
