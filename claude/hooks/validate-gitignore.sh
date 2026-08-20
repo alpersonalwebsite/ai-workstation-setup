@@ -95,12 +95,23 @@ fi
 # tolower() keeps the case-insensitivity the previous `grep -vi` had, so a
 # committed `.env.EXAMPLE` is still treated as a template. It also makes the match
 # side case-insensitive, which is the right default on a case-insensitive
-# filesystem such as macOS's.
+# filesystem such as macOS's. Measured by feeding paths straight through the
+# filter, which needs no checkout: `x/.env.EXAMPLE` is not flagged, `AUDIT.ENV`
+# is. (A git fixture cannot show this on macOS, because the filesystem folds
+# .env.EXAMPLE into .env.example before git ever sees it.)
+#
+# THE PREFIX IS BOUNDED so `.envelope` and `.envtest` are not reported as env
+# files. `(rc)?` is load-bearing and the obvious `^\.env($|[.-])` is wrong: it
+# drops `.envrc` and `.envrc.local`, which are precisely the files this policy
+# exists for, since direnv files routinely hold `export SECRET=...` lines.
+# Measured, flagged / not flagged:
+#   .env  .envrc  .envrc.local  .env.local  audit.env  AUDIT.ENV     flagged
+#   .envelope  .Envelope  .envtest  .env.example  x/.env.EXAMPLE     not
 if git -C "$CWD" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if TRACKED=$(git -C "$CWD" ls-files 2>/dev/null); then
     TRACKED_ENV=$(printf '%s\n' "$TRACKED" \
       | awk -F/ '{ b = tolower($NF) }
-                 (b ~ /^\.env/ || b ~ /\.env$/) && b !~ /example|sample|template/ { print }')
+                 (b ~ /^\.env(rc)?($|[.-])/ || b ~ /\.env$/) && b !~ /example|sample|template/ { print }')
     [[ -n "$TRACKED_ENV" ]] && WARNINGS+=("env file(s) already TRACKED, gitignore will not untrack: $(printf '%s' "$TRACKED_ENV" | tr '\n' ' ')")
   else
     # Same rule as above: could not look is not the same as nothing found.
