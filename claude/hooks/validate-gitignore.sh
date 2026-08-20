@@ -41,16 +41,28 @@ if [[ -f "$CWD/.gitignore" ]]; then
   # the repository is not protection for anyone who clones it.
   PROBE_DIR=$(mktemp -d 2>/dev/null)
   if [[ -z "$PROBE_DIR" ]] || ! command -v git >/dev/null 2>&1 \
-     || ! git -C "$PROBE_DIR" init -q . >/dev/null 2>&1 \
+     || ! GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+            git -C "$PROBE_DIR" init -q . >/dev/null 2>&1 \
      || ! cp "$CWD/.gitignore" "$PROBE_DIR/.gitignore" 2>/dev/null; then
     # FAIL CLOSED. A control that cannot run must not report success by staying
     # silent, which is the defect this file has had to fix in several places.
     WARNINGS+=("gitignore coverage NOT CHECKED (git or mktemp unavailable)")
     cleanup_probe
   else
-    # HERMETIC. Without these the verdict depends on who ran it: a global
-    # core.excludesFile or a system config could ignore a path this repo does not,
-    # and the hook would report protection the repo does not actually have.
+    # HERMETIC, AND THE INIT NEEDS IT AS MUCH AS THE QUERY. Without these the
+    # verdict depends on who ran it: a global core.excludesFile or a system config
+    # could ignore a path this repo does not, and the hook would report protection
+    # the repo does not actually have.
+    #
+    # Guarding only the query is NOT enough, which is why the init above carries the
+    # same pair. A global `init.templateDir` copies its info/exclude into every new
+    # repository, so an unguarded `git init` plants exclude rules INSIDE the probe
+    # .git before any query runs, and no query-side hardening can see past them.
+    # Measured with a template holding one line: the probe reported that path
+    # ignored; guarding the query alone still reported it ignored; guarding the init
+    # with this pair left the injected line out and the probe reported it not
+    # ignored. `-c init.templateDir=` also blocks it, but only that one vector,
+    # where the env pair blocks whatever else global config could do at init time.
     probe() {
       GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
         git -C "$PROBE_DIR" -c core.excludesFile=/dev/null \
