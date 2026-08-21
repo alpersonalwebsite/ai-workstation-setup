@@ -87,8 +87,20 @@ if [[ -f "$CWD/.gitignore" ]]; then
         probe "$n" || { WARNINGS+=("$label not ignored"); return 0; }
       done
     }
+    # THE ENV CLASS CARRIES A NESTED NAME TOO, and it was the only class without
+    # one, against the rule stated three lines up. The four root-level names were
+    # all satisfied by a .gitignore holding exactly those four literals, while a
+    # nested suffix-glob path stayed unignored: measured, the class reported PASS
+    # and that path came back not ignored. So the tracked-file check below, which
+    # reports a nested env file as already committed, had no coverage requirement
+    # standing behind it. The name used here is the same one that check's comment
+    # names as the real secret a substring filter once dropped, so the probe and
+    # the report now ask about the same shape. It can only ADD a requirement,
+    # since a class passes only when every one of its names passes.
+    # check-ignore --no-index answers on the path name alone, so no directory has
+    # to exist inside the probe repository.
     ENVMISS=()
-    for probe_name in .env .envrc .env.local prod.env; do
+    for probe_name in .env .envrc .env.local prod.env examples/audit.env; do
       probe "$probe_name" || ENVMISS+=("$probe_name")
     done
     [[ ${#ENVMISS[@]} -gt 0 ]] && WARNINGS+=("env files not ignored: ${ENVMISS[*]}")
