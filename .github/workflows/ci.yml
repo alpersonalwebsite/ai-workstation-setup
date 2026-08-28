@@ -30,12 +30,14 @@ jobs:
       # status line were unlinted while being the parts that run on every
       # session, write and prompt render, and two of the hooks are the secret
       # scanners. Globbed rather than listed so a new script is covered on
-      # arrival.
+      # arrival, and globstar-RECURSIVE (`**`) so a script in a subdirectory is
+      # covered too: block-secret-echo.sh's regression suites live under
+      # claude/hooks/tests/, and a plain `*.sh` would silently skip them.
       #
       # The guard tests the ONLY array that can be empty, the glob's own, and
       # tests it two ways. Counting a list that also holds literals cannot work:
       # with claude/hooks/ emptied, `(setup.sh claude/statusline.sh
-      # claude/hooks/*.sh)` measures 3 under default bash (the glob stays
+      # claude/hooks/**/*.sh)` measures 3 under default bash (the glob stays
       # literal) and 2 under nullglob, so a count-is-zero test never fires and
       # the nullglob case silently lints two files and reports green. The `-e`
       # test is what catches the literal case, rather than relying on shellcheck
@@ -43,7 +45,8 @@ jobs:
       - name: shellcheck bash scripts
         run: |
           set -euo pipefail
-          hooks=(claude/hooks/*.sh)
+          shopt -s globstar
+          hooks=(claude/hooks/**/*.sh)
           if [ ${#hooks[@]} -eq 0 ] || [ ! -e "${hooks[0]}" ]; then
             echo "::error::no hook scripts matched, the glob is wrong"
             exit 1
@@ -55,7 +58,8 @@ jobs:
       - name: bash -n (syntax)
         run: |
           set -euo pipefail
-          hooks=(claude/hooks/*.sh)
+          shopt -s globstar
+          hooks=(claude/hooks/**/*.sh)
           if [ ${#hooks[@]} -eq 0 ] || [ ! -e "${hooks[0]}" ]; then
             echo "::error::no hook scripts matched, the glob is wrong"
             exit 1
@@ -63,6 +67,19 @@ jobs:
           for f in setup.sh claude/statusline.sh "${hooks[@]}"; do
             bash -n "$f"
           done
+
+      # The block-secret-echo guard is the one hook that ships its own tests,
+      # because it carries a hand-maintained per-prefix option table a reader is
+      # told to extend and deliberate over-blocks (e.g. `sudo -h ls ./env`) that
+      # only the suites tell apart from bugs. Shipping the suites without running
+      # them would document that intent and never enforce it, so run both here.
+      # Each takes the hook path as $1 and exits non-zero on any failing case or
+      # an incomplete run.
+      - name: block-secret-echo regression suites
+        run: |
+          set -euo pipefail
+          bash claude/hooks/tests/hook-suite.sh claude/hooks/block-secret-echo.sh
+          bash claude/hooks/tests/envrule.sh     claude/hooks/block-secret-echo.sh
 
       - name: zsh -n (syntax)
         run: zsh -n config/claude-proj.zsh
