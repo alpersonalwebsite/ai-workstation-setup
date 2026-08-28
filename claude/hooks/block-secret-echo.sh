@@ -203,8 +203,19 @@ for st in re.split(r";|&&|\|\||&(?!>)|\n", ti.get("command") or ""):  # RAW cmd;
 # A verb counts as a command only when at_cmd_pos holds for the text before it; an
 # optional path prefix ([^space;&|<>]*/) inside the match lets /usr/bin/env count
 # while keeping ./env, a mid-path component, and a plain argument out.
-ENVFILE = r"(^|[^A-Za-z0-9_.~-])\.env($|[^a-zA-Z.])"
 READER_ALT = "cat|bat|less|more|head|tail|open|pbcopy|strings|xxd|od|grep|egrep|fgrep|rg|ag|awk|sed|perl|python3?|ruby|node|deno|php|source"
+# A .env / .env.<suffix> file whose VALUE form should be blocked, excluding the
+# reference forms .env.example / .sample / .template. Matches at a filename
+# boundary (so cat<.env and a mid-path .env still count) and reaches SUFFIXED
+# files (.env.local, .env.production, .env.bak): the old bare-.env pattern matched
+# only `.env` and let `cat .env.local` through, though the Read/Grep path rule
+# already caught the same names.
+def names_real_envfile(st):
+    for m in re.finditer(r"(?:^|[^A-Za-z0-9_.~-])(\.env(?:\.[A-Za-z0-9_-]+)?)(?=$|[^A-Za-z0-9_-])", st):
+        parts = m.group(1).split(".")            # .env -> ["", "env"]; .env.local -> ["", "env", "local"]
+        if len(parts) >= 3 and parts[2] in ("example", "sample", "template"): continue
+        return True
+    return False
 def verb_at_cmd(st, alt, flags=0):
     for m in re.finditer(r"(?<![A-Za-z0-9_./-])(?:[^\s;&|<>]*/)?(" + alt + r")(?![A-Za-z0-9_])", st, flags):
         if at_cmd_pos(st[:m.start()], strict=True): yield m   # 2b/3/4 need the strict walk
@@ -214,8 +225,8 @@ def env_dump(st):        # bare env / printenv / set, or export -p, at command p
     for m in verb_at_cmd(st, "export"):
         if re.match(r"\s+-p\s*($|[;&|])", st[m.end():]): return True
     return False
-def env_file(st):        # names a .env AND reads it (reader at command position, or the . builtin)
-    if not re.search(ENVFILE, st): return False
+def env_file(st):        # names a real .env AND reads it (reader at command position, or the . builtin)
+    if not names_real_envfile(st): return False
     if re.match(r"\s*\.\s", st): return True
     for m in verb_at_cmd(st, READER_ALT): return True
     return False
@@ -228,11 +239,21 @@ def print_name(st):      # printenv NAME / declare -p NAME / ..., NAME secret-sh
             hit = re.match(r"\s+-p\s+(?:" + SECRET_RE + r")", rest, re.I)
         if hit and not re.search(r">\s*/dev/null|>[^&]", st): return True
     return False
-envdump_v = envfile_v = printname_v = "OK"
-for st in re.split(r"[;|&\n]", ti.get("command") or ""):  # finest split (matches the old tr ";|&")
+# PROFILE detection lives here, over the RAW command, because flat() collapses
+# newlines to spaces before the bash rules see $cmd. In bash a newline-separated
+# `git check-ignore -q .env` + `cat ~/.zshrc` became ONE segment that starts with
+# check-ignore, so the exemption swallowed the trailing profile read (measured
+# fail-open). Splitting the raw command on newlines too keeps the statements apart.
+PROFILE_RE_PY = r"\.zshrc[a-z.]*|\.bash_profile|\.bashrc|\.zshenv|\.zprofile"
+def seg_check_ignore(st):    # the statement IS a bare check-ignore: no subst/redir/chain, git ... check-ignore first
+    if re.search(r"[$<>]", st) or chr(96) in st: return False
+    return re.match(r"^\s*git(\s+-\S+)*\s+check-ignore(\s|$)", st) is not None
+envdump_v = envfile_v = printname_v = profile_v = "OK"
+for st in re.split(r"[;|&\n]", ti.get("command") or ""):  # finest split, newlines included
     if env_dump(st): envdump_v = "BLOCK"
     if env_file(st): envfile_v = "BLOCK"
     if print_name(st): printname_v = "BLOCK"
+    if re.search(PROFILE_RE_PY, st) and not seg_check_ignore(st): profile_v = "BLOCK"
 cmd_s = flat(ti.get("command"))
 print("PARSED")
 print(cmd_s)
@@ -242,6 +263,7 @@ print(ps_verdict)
 print(envdump_v)
 print(envfile_v)
 print(printname_v)
+print(profile_v)
 print("END")' "$SECRET_RE" 2>/dev/null)
 
 # FAIL CLOSED. Measured before this existed: with the shell utilities present and
@@ -274,6 +296,8 @@ rest=${rest#*$'\n'}
 envfile_verdict=${rest%%$'\n'*}
 rest=${rest#*$'\n'}
 printname_verdict=${rest%%$'\n'*}
+rest=${rest#*$'\n'}
+profile_verdict=${rest%%$'\n'*}
 
 # Reading a profile or env file wholesale displays every value in it. Applies
 # to Read/NotebookEdit style tools, which carry file_path rather than command.
@@ -357,52 +381,21 @@ fi
 # .env` / `mv .env .env.bak` (the `.` builtin vs a `.env` argument), and now the
 # path forms /bin/cat .env (fail-open) and /usr/local/opt/node/.env (over-block).
 
-# A segment qualifies for the check-ignore exemption only if it IS a
-# check-ignore command, not if it merely contains one.
-#
-# Containing one was the old test, and it handed out a pass to everything beside
-# it. Measured before this: `git check-ignore -q .env && cat .env` and
-# `cat .env && git check-ignore -q .env` were both ALLOWED, because the string
-# contained a check-ignore somewhere. Per-segment splitting alone does not fix
-# it either, since a substitution keeps the reader inside the exempt segment:
-# `cat ~/.zshrc "$(git check-ignore -q .env)"` is ONE segment that both names a
-# profile and contains a check-ignore.
-#
-# So the segment must START with git, and must carry no substitution, no
-# redirection and no chaining. Anything richer than a literal check-ignore
-# invocation is refused, which fails closed.
-seg_is_check_ignore() {
-    printf '%s' "$1" \
-      | grep -qE '^[[:space:]]*git([[:space:]]+-[^[:space:]]+)*[[:space:]]+check-ignore([[:space:]]|$)' \
-      || return 1
-    printf '%s' "$1" | grep -q '[$`<>]' && return 1
-    return 0
-}
-
 # Env files: decided in the parse pass (env_file), which splits per statement and
 # denies one that names a .env AND could display it. No check-ignore exemption is
 # needed: `git` is not a reader, so a check-ignore statement never reaches this.
 [ "${envfile_verdict:-}" = "BLOCK" ] && deny 'that command could display the contents of an env file; copy or inspect the committed .env.example instead'
 
-# The PROFILE rule stays in bash: it is a blanket deny of any command that names a
-# shell profile, with a single check-ignore exemption, so it needs no command-
-# position parsing. NOTE the trailing newline in `printf '%s\n'`: with a bare
-# `printf '%s'` the final segment is unterminated, `read` returns nonzero on it,
-# the loop body never runs for it, and a single-segment command was ALLOWED. That
-# fail-open was found by the suite immediately after the split was introduced.
-PROFILE_RE='(\.zshrc[a-z.]*|\.bash_profile|\.bashrc|\.zshenv|\.zprofile)'
-if printf '%s' "$cmd" | grep -qE "$PROFILE_RE"; then
-  # `git check-ignore` tests a PATH against ignore rules and never opens the
-  # file, so it cannot disclose a value. It is also a check the secrets pattern
-  # prescribes, so blocking it would make the guard forbid its own doc.
-  bad=$(printf '%s\n' "$cmd" | tr ';|&' '\n' | while IFS= read -r seg; do
-          printf '%s' "$seg" | grep -qE "$PROFILE_RE" || continue
-          seg_is_check_ignore "$seg" || echo X
-        done)
-  if [ -n "$bad" ]; then
-    deny 'shell profiles are off limits; work in the repo and use .env.example references instead'
-  fi
-fi
+# Profiles: decided in the parse pass (profile_v). A statement naming a shell
+# profile is denied unless it IS a bare `git check-ignore` (the check the secrets
+# pattern prescribes, which tests a path against ignore rules and never opens the
+# file). This moved out of bash because flat() collapses newlines to spaces before
+# $cmd is seen here, so a newline-separated `git check-ignore ...` + `cat ~/.zshrc`
+# became one segment the exemption swallowed, hiding the profile read (measured
+# fail-open). The raw-command split in python keeps the statements apart, and the
+# exemption still refuses any statement carrying a substitution, redirection or
+# chaining, since those can hide a reader beside the check-ignore.
+[ "${profile_verdict:-}" = "BLOCK" ] && deny 'shell profiles are off limits; work in the repo and use .env.example references instead'
 
 # 4. Whole-environment dumps (bare env / printenv / set, or export -p). DECIDED
 #    in the parse pass (env_dump), so a path form /usr/bin/env is caught while

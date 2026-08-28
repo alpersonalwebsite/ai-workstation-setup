@@ -78,6 +78,8 @@ probe "with a flag"                      allow "git check-ignore -q $Z"
 probe "chained with a reader"            block "cat $Z && git check-ignore $Z"
 probe "reader first, check-ignore after" block "git check-ignore -q $Z; cat $Z"
 probe "substitution hiding a reader"     block "cat $Z \"\$(git check-ignore -q $E)\""
+probe "newline hides a reader after check-ignore" block "$(printf 'git check-ignore -q %s\ncat %s' "$E" "$Z")"
+probe "two check-ignores across a newline"        allow "$(printf 'git check-ignore -q %s\ngit check-ignore -q %s' "$Z" "$E")"
 
 echo
 echo "== env files: DISPLAY commands are denied =="
@@ -90,6 +92,9 @@ probe "less"                             block "less $E"
 probe "the source builtin"               block ". $E"
 probe "source by name"                   block "source $E"
 probe "an interpreter reading one"       block "python3 -c 'print(open(\"$E\").read())'"
+probe "suffixed dotenv (.local)"         block "cat $E.local"
+probe "suffixed dotenv (.production)"     block "grep TOKEN $E.production"
+probe "backup dotenv (.bak)"             block "cat $E.bak"
 
 echo
 echo "== the delimiter must not be a hand-listed set =="
@@ -107,6 +112,7 @@ probe "chmod"                            allow "chmod 600 $E"
 probe "move"                             allow "mv $E $E.bak"
 probe "list"                             allow "ls -la $E"
 probe "read the committed example"       allow "cat $EX"
+probe "suffixed reference (.sample)"     allow "cat $E.sample"
 # command position: a reader NAME sitting mid-path is a directory component, not a
 # command reading the .env. These over-blocked when rule 3 added `/` to a flat
 # leading class (the trailing \b was satisfied by the next /); fixed via at_cmd_pos.
@@ -134,7 +140,7 @@ ran=$((pass + fail))
 # directly while the guard read EXPECTED, so updating only EXPECTED left the
 # summary printing a stale denominator. That is the same count-drift this
 # guard exists to catch, introduced by the commit that added the guard.
-EXPECTED=40
+EXPECTED=46
 printf '  passed=%s failed=%s ran=%s/%s\n' "$pass" "$fail" "$ran" "$EXPECTED"
 
 # COMPLETENESS GUARD. A case that never runs is not a case that passed, and
