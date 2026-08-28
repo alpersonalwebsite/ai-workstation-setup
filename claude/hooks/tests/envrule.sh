@@ -1,4 +1,7 @@
 #!/bin/bash
+# shellcheck disable=SC2016,SC2088
+# ^ probe payloads are LITERAL command strings handed to the hook verbatim, so
+#   $(...), backticks and ~ must stay unexpanded here rather than be "fixed".
 # Regression suite for the shell-profile and env-file rules of
 # ~/.claude/hooks/block-secret-echo.sh. Everything else is in hook-suite.sh.
 #

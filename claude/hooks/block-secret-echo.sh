@@ -24,6 +24,7 @@
 
 set -uo pipefail
 
+# shellcheck disable=SC2016  # the literal $v is advice text shown to the user, not an expansion
 deny() { printf 'BLOCKED by block-secret-echo.sh: %s\n\nUse a form that cannot expand the value:\n  printenv "$v" >/dev/null && echo SET || echo UNSET\n  op read <ref> | shasum -a 256 | cut -c1-12\n' "$1" >&2; exit 2; }
 
 payload=$(cat)
@@ -49,6 +50,7 @@ SECRET_RE='[A-Za-z_]*(_PAT|_TOKEN|TOKEN_[A-Z_]*|_KEY|_KEY_[A-Z_]*|_SECRET|PASSWO
 # what a total parse failure leaves. Without a marker those two cases are the
 # same string, and the script would treat "python3 did not run" as "nothing to
 # check".
+# shellcheck disable=SC2016  # single quotes are required: the python program must not be shell-expanded
 fields=$(printf '%s' "$payload" | python3 -c 'import json,sys,re
 SECRET_RE = sys.argv[1] if len(sys.argv) > 1 else "(?!)"   # passed from bash; (?!) never matches
 def flat(s): return (s or "").replace("\n", " ").replace("\r", " ")
@@ -393,7 +395,7 @@ if printf '%s' "$cmd" | grep -qE "$PROFILE_RE"; then
   # `git check-ignore` tests a PATH against ignore rules and never opens the
   # file, so it cannot disclose a value. It is also a check the secrets pattern
   # prescribes, so blocking it would make the guard forbid its own doc.
-  bad=$(printf '%s\n' "$cmd" | tr ';|&' '\n\n\n' | while IFS= read -r seg; do
+  bad=$(printf '%s\n' "$cmd" | tr ';|&' '\n' | while IFS= read -r seg; do
           printf '%s' "$seg" | grep -qE "$PROFILE_RE" || continue
           seg_is_check_ignore "$seg" || echo X
         done)

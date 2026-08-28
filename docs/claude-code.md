@@ -71,10 +71,11 @@ echo '{"model":{"display_name":"Opus 5"},"context_window":{"used_percentage":12}
 # settings.json: valid JSON, status line wired, hooks registered.
 python3 -m json.tool ~/.claude/settings.json > /dev/null && echo "settings.json parses"
 jq -c '.statusLine' ~/.claude/settings.json      # {"type":"command","command":"~/.claude/statusline.sh",...}
-jq -r '.hooks | keys[]' ~/.claude/settings.json  # SessionStart, PostToolUse, Stop
+jq -r '.hooks | keys[]' ~/.claude/settings.json  # PreToolUse, SessionStart, PostToolUse, Stop
 
-# The hooks need jq; two of them also need gitleaks or they no-op silently.
-command -v jq gitleaks
+# Most hooks need jq; block-secret-echo uses python3 and fails closed without it
+# (a denied tool call); two also need gitleaks or they no-op silently.
+command -v jq python3 gitleaks
 ```
 
 Inside a session, `/doctor` checks the health of the install; `claude --help`
@@ -113,10 +114,18 @@ does not match what you asked for, or the manual-only flag described below.
   It deliberately sets **no `permissions.allow`**, since a permission grant
   shipped without its reasoning is worse than no grant; see
   [Security notes](ai-workstation.md#security-notes) before adding any.
-- [`claude/hooks/`](../claude/hooks/) holds four hook scripts. Hooks are where
+- [`claude/hooks/`](../claude/hooks/) holds five hook scripts. Hooks are where
   security posture stops being advice and starts being enforcement, since they run
   whether or not Claude decides to cooperate. Copy them to `~/.claude/hooks/`,
   `chmod +x`, and wire them with the settings file above.
+  - `block-secret-echo.sh` (**PreToolUse** on Bash, Read and Grep) is the only
+    hook that runs *before* a tool call, so it prevents disclosure rather than
+    reporting it and **exits 2 to block**. It refuses commands that could print a
+    credential: expanding or printing a secret-shaped variable, dumping the
+    environment, a `ps` environment dump, or reading a shell profile or `.env`
+    wholesale. It is name-shape based, so it never reads a value and a literal
+    mention of a name (grep, docs, `.env.example`) is fine. Its two regression
+    suites are in [`claude/hooks/tests/`](../claude/hooks/tests/).
   - `validate-gitignore.sh` (**SessionStart**) warns when the project's
     `.gitignore` is missing or lacks the patterns that keep secrets and build junk
     out of git. It strips comment lines first, so a comment mentioning `.env` does
@@ -131,10 +140,14 @@ does not match what you asked for, or the manual-only flag described below.
     has uncommitted changes, naming the repo and counting modified versus
     untracked. Never blocks.
 
-  All four read their event JSON from stdin and need **`jq`**. The two scanners
-  need **`gitleaks`**, and are guarded with `command -v`, so they no-op silently
-  rather than failing if it is absent. Exit code 2 is the blocking one: only
-  `gitleaks-check.sh` uses it, and only on a real finding.
+  All five read their event JSON from stdin. Four parse it with **`jq`**;
+  `block-secret-echo.sh` parses it with **`python3`** and, unlike the others,
+  **fails closed** if its interpreter is missing (it denies the tool call rather
+  than no-opping, since a secret guard that silently passes is worse than none).
+  The two scanners need **`gitleaks`** and are guarded with `command -v`, so they
+  no-op silently if it is absent. Exit code 2 is the blocking one:
+  `gitleaks-check.sh` uses it on a real finding, and `block-secret-echo.sh` uses
+  it to refuse a disclosing command.
 - [`claude/skills/`](../claude/skills/) holds one folder per skill. Each is a
   `SKILL.md` that Claude invokes when a task matches its description, unless it
   opts out with `disable-model-invocation: true`. That opt-out is what **manual
