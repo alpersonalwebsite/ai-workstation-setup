@@ -41,10 +41,28 @@ resumable, which is the point of everything below.
   `false` moves that from something you ask for to something the harness applies,
   the same reason the hooks below exist.
 - **`permissions.deny`** refuses whole classes of file outright, rather than
-  prompting: `.env*`, `*.env`, `secrets/**`, `credentials*`, `**/*.pem`,
-  `**/*.key`, plus `~/.aws/credentials`, `~/.ssh/**` and `~/.config/gh/hosts.yml`,
+  prompting: the dotenv globs, `secrets/**`, `credentials*`, `*.pem`, `*.key`, plus
+  the credential stores under `~` (`.ssh/**`, `.aws/credentials`, `.aws/sso/cache/**`,
+  `.config/gh/hosts.yml`, `.netrc`, `.npmrc`, `.docker/config.json`, `.kube/config`),
   each denied for both `Read` and `Edit`. The full list is in
   [`claude/settings.example.json`](../claude/settings.example.json).
+
+  **The patterns are anchored with `//`, and that matters more than it looks.** A
+  bare pattern like `Read(.env*)` is resolved **relative to the directory the
+  session started in**, so it covers that directory and everything under it and
+  nothing above it. Start Claude in `repo/services/api` and a relative rule does
+  not cover `repo/.env` one level up. Since this file is user-level settings
+  (`~/.claude/settings.json`) rather than a per-project file, it should hold
+  wherever you launch, so the entries use the `//` absolute anchor, which the
+  permissions reference describes as matching anywhere on the filesystem. The `~`
+  entries are already absolute and need no anchor.
+
+  ⚠️ **Confirm this on your own machine rather than trusting the file.** Anchor
+  syntax is the part of this most likely to be wrong after a version bump, and a
+  deny rule that silently matches nothing looks exactly like one that works. From
+  a subdirectory of a project that has a `.env` one or more levels up, ask Claude
+  to read it: a refusal means the anchor is doing its job, and being shown the
+  contents means it is not.
 
   It resembles the `.gitignore` list and is **deliberately not the same list**, so
   do not sync the two mechanically. A gitignore pattern only decides what git
@@ -66,16 +84,25 @@ resumable, which is the point of everything below.
   not to copy into it.
 
   ⚠️ **Know what this does not cover, or you will trust it too far.** These rules
-  bind the built-in **`Read`** and **`Edit`** tools. They do not obviously extend
-  to a shell command doing the same thing through Bash. The permissions reference
-  names `cat`, `head`, `tail` and `sed` as Bash commands a `Read` deny rule
-  reaches; `grep` is not among them, and whether `Bash(grep .env)` is refused is
-  **unverified here**, neither documented either way nor tested. Treat the deny
-  list as closing the tool path and assume the shell path is open. That gap is
-  exactly why `block-secret-echo.sh` runs as a `PreToolUse` hook on `Bash`: two
-  independent controls, because neither one covers the whole surface. Note also
-  that `Read(**/*.pem)` and `Read(**/*.key)` are extension rules, so an
-  extensionless key like `id_rsa` is only covered by the `~/.ssh/**` entry.
+  bind the built-in **`Read`** and **`Edit`** tools, and reach some shell commands
+  besides. Three gaps, worst first:
+
+  - **Indirect readers are explicitly out of scope.** The reference states the
+    rules do not apply to arbitrary subprocesses that read or write files
+    themselves, a Python or Node script that opens a file being the example given,
+    and points at the sandbox for OS-level enforcement. Nothing in a permissions
+    list stops `python3 -c` from opening a credential.
+  - **Shell commands are partially covered and the boundary is fuzzy.** The
+    reference says deny rules apply to file commands Claude Code recognises in
+    Bash, "such as `cat`, `head`, `tail`, and `sed`". That is an open example
+    list, not an exhaustive one, so whether `grep` is included is **undocumented**
+    rather than excluded. Either way the safe posture is the same: assume the
+    shell path is open and do not rely on the deny list to close it.
+  - **Extension rules miss extensionless files.** `*.pem` and `*.key` match on
+    extension, so a key named `id_rsa` is covered only by the `~/.ssh/**` entry.
+
+  The first two are exactly why `block-secret-echo.sh` runs as a `PreToolUse` hook
+  on `Bash`: two independent controls, because neither covers the whole surface.
 
   This is a **deny** list only. The example file still sets no `permissions.allow`,
   for the reason given under [Claude Code config and skills](#claude-code-config-and-skills):
@@ -228,10 +255,20 @@ does not match what you asked for, or the manual-only flag described below.
     Reports by severity with remediation. Ready to use as-is, and model-invocable
     rather than manual only.
   - [`audit-claude-config`](../claude/skills/audit-claude-config/) points the same
-    idea at `~/.claude/` itself, looking for secrets or PII that ended up in
-    memory files, settings, or transcripts. Worth running before you push a
-    dotfiles repo containing your Claude config anywhere public. Ready to use
-    as-is, model-invocable.
+    idea at `~/.claude/` itself, looking for secrets or PII in memory files and
+    settings, plus a `gitleaks` sweep of the whole directory that covers
+    transcripts incidentally. Worth running before you push a dotfiles repo
+    containing your Claude config anywhere public. Ready to use as-is,
+    model-invocable.
+
+  Those two are the only skills here that both run shell commands **and** can be
+  invoked by Claude on its own, so their `allowed-tools` are scoped to the exact
+  commands they need (`Bash(gitleaks:*)`, `Bash(git ls-files:*)`) rather than a
+  bare `Bash`. That distinction is worth understanding before you write your own:
+  `allowed-tools` **grants without prompting**, it does not restrict. A bare `Bash`
+  on a model-invocable skill means Claude can decide to run the skill and then run
+  any shell command inside it with no prompt. Check that line on every skill you
+  copy from anyone, including this repo.
 
   Those last two are why the pattern list is worth keeping in one shape. The same
   twelve patterns appear in three places that **must** agree: the `.gitignore`,
@@ -241,7 +278,7 @@ does not match what you asked for, or the manual-only flag described below.
   set, for the reasons under [Claude Code settings](#claude-code-settings).
 
   **What "manual only" actually does.**
-  Four of the five skills above carry `disable-model-invocation: true`:
+  Four of the seven skills above carry `disable-model-invocation: true`:
   `fact-check`, `fill-claude-md`, `rca` and `sync-config-docs`. The name reads as
   though it only suppresses *automatic* loading, leaving a deliberate call
   available. It does not. Measured against the loader on Claude Code 2.1.226 with
