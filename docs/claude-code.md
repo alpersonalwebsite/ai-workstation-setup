@@ -41,11 +41,42 @@ resumable, which is the point of everything below.
   `false` moves that from something you ask for to something the harness applies,
   the same reason the hooks below exist.
 - **`permissions.deny`** refuses whole classes of file outright, rather than
-  prompting: the dotenv globs, `secrets/**`, `credentials*`, `*.pem`, `*.key`, plus
-  the credential stores under `~` (`.ssh/**`, `.aws/credentials`, `.aws/sso/cache/**`,
-  `.config/gh/hosts.yml`, `.netrc`, `.npmrc`, `.docker/config.json`, `.kube/config`),
-  each denied for both `Read` and `Edit`. The full list is in
+  prompting: the dotenv globs, `secrets/**`, `credentials.{json,yml,yaml}`, `*.pem`,
+  `*.key`, `.npmrc`, plus the credential stores under `~` (`.ssh/**`,
+  `.aws/credentials`, `.aws/sso/cache/**`, `.config/gh/hosts.yml`, `.netrc`,
+  `.docker/config.json`, `.kube/config`), each denied for both `Read` and `Edit`.
+  The full list is in
   [`claude/settings.example.json`](../claude/settings.example.json).
+
+  **Two patterns are deliberately narrower than they look, for the same reason the
+  substring globs are omitted below.** `credentials.{json,yml,yaml}` is named
+  rather than a `credentials*` prefix, because `credentials.ts` and
+  `credentials.service.ts` are ordinary auth-module filenames and a prefix glob
+  would make them unreadable in every project with no prompt to override. That is
+  the identical argument that keeps `**/*credential*` out of the list, so applying
+  it to one shape and not the other would have been incoherent. `.npmrc` is
+  filesystem-wide rather than home-only, because a project-level `.npmrc` carries
+  `_authToken` exactly as the home one does.
+
+  One collision is accepted rather than solved: `*.key` also matches Keynote
+  documents, on the platform this setup targets. Denying a `.key` is close to free
+  since a Keynote file is a binary bundle the Read tool cannot usefully show
+  anyway, so the rule stays broad.
+
+  ⚠️ **The two controls disagree about `.env.example`, and you should know which
+  way.** `.env*` matches `.env.example`, so the **Read tool** is denied on it
+  everywhere, while `block-secret-echo.sh` deliberately allows it and its refusal
+  message points you at "the committed `.env.example`" as the safe alternative.
+  Measured against the shipped hook, all three of `cp`, `cat` and the Read tool
+  pass the hook; it is the deny rule that closes the Read path. So inspecting a
+  committed example still works through Bash and not through the Read tool.
+
+  This cannot be patched with an exception: a deny rule carries no allowlist
+  carve-out, and deny is evaluated first, so an `allow` entry for `.env.example`
+  would not win. The alternatives are to enumerate real env filenames instead of
+  globbing (brittle, unbounded) or to accept the asymmetry. This setup accepts it,
+  on the grounds that a reference file is cheap to read another way while a
+  narrower glob risks missing a real one.
 
   **The patterns are anchored with `//`, and that matters more than it looks.** A
   bare pattern like `Read(.env*)` is resolved **relative to the directory the

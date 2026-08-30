@@ -1,7 +1,7 @@
 ---
 name: audit-claude-config
 description: Scan ~/.claude/ for accidentally stored secrets or PII
-allowed-tools: Bash(gitleaks:*) Glob Grep
+allowed-tools: Bash(gitleaks:*) Read Glob Grep
 ---
 
 Audit the ~/.claude/ directory for sensitive data:
