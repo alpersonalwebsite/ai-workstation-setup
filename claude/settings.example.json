@@ -1,4 +1,31 @@
 {
+  "permissions": {
+    "deny": [
+      "Read(.env*)",
+      "Read(*.env)",
+      "Read(secrets/**)",
+      "Read(credentials*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(~/.aws/credentials)",
+      "Read(~/.ssh/**)",
+      "Read(~/.config/gh/hosts.yml)",
+      "Edit(.env*)",
+      "Edit(*.env)",
+      "Edit(secrets/**)",
+      "Edit(credentials*)",
+      "Edit(**/*.pem)",
+      "Edit(**/*.key)",
+      "Edit(~/.aws/credentials)",
+      "Edit(~/.ssh/**)",
+      "Edit(~/.config/gh/hosts.yml)"
+    ]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
   "hooks": {
     "PreToolUse": [
       {

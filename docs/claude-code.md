@@ -14,7 +14,9 @@ resumable, which is the point of everything below.
 {
   "cleanupPeriodDays": 365,
   "tui": "fullscreen",
-  "theme": "dark"
+  "theme": "dark",
+  "attribution": { "commit": "", "pr": "", "sessionUrl": false },
+  "permissions": { "deny": ["Read(.env*)", "Read(~/.ssh/**)", "..."] }
 }
 ```
 
@@ -33,6 +35,35 @@ resumable, which is the point of everything below.
   pair is for 16-colour terminals and `-daltonized` for colour-vision deficiency.
   Since `dark` is already the default, setting it is explicitness rather than a
   change; `auto` is the one to use if you want it to follow the system appearance.
+- **`attribution`** turns a rule into enforcement. `CLAUDE.example.md` asks for no
+  AI attribution in commits and PRs, but an instruction is advice the model can
+  drift from. Setting `commit` and `pr` to the empty string and `sessionUrl` to
+  `false` moves that from something you ask for to something the harness applies,
+  the same reason the hooks below exist.
+- **`permissions.deny`** refuses whole classes of file outright, rather than
+  prompting: `.env*`, `*.env`, `secrets/**`, `credentials*`, `**/*.pem`,
+  `**/*.key`, plus `~/.aws/credentials`, `~/.ssh/**` and `~/.config/gh/hosts.yml`,
+  each denied for both `Read` and `Edit`. The full list is in
+  [`claude/settings.example.json`](../claude/settings.example.json). It is the same
+  list the `.gitignore` rules and `validate-gitignore.sh` use, which is deliberate:
+  one set of patterns, enforced at the three places a secret can escape (committed,
+  read, printed).
+
+  ⚠️ **Know what this does not cover, or you will trust it too far.** These rules
+  bind the built-in **`Read`** and **`Edit`** tools. They do not obviously extend
+  to a shell command doing the same thing through Bash. The permissions reference
+  names `cat`, `head`, `tail` and `sed` as Bash commands a `Read` deny rule
+  reaches; `grep` is not among them, and whether `Bash(grep .env)` is refused is
+  **unverified here**, neither documented either way nor tested. Treat the deny
+  list as closing the tool path and assume the shell path is open. That gap is
+  exactly why `block-secret-echo.sh` runs as a `PreToolUse` hook on `Bash`: two
+  independent controls, because neither one covers the whole surface. Note also
+  that `Read(**/*.pem)` and `Read(**/*.key)` are extension rules, so an
+  extensionless key like `id_rsa` is only covered by the `~/.ssh/**` entry.
+
+  This is a **deny** list only. The example file still sets no `permissions.allow`,
+  for the reason given under [Claude Code config and skills](#claude-code-config-and-skills):
+  a grant shipped without its reasoning is worse than no grant.
 
 The hooks that enforce this posture (secret-scanning, gitignore validation) now
 ship here too, along with a settings file that wires them, the status line, the
@@ -152,7 +183,7 @@ does not match what you asked for, or the manual-only flag described below.
   `SKILL.md` that Claude invokes when a task matches its description, unless it
   opts out with `disable-model-invocation: true`. That opt-out is what **manual
   only** means below, and it is stronger than the name suggests, so read the note
-  that follows the five skills before copying them.
+  that follows the seven skills before copying them.
   - [`writing-voice`](../claude/skills/writing-voice/) captures your writing
     voice across professional and personal registers so drafts sound like you.
     It ships as a template.
@@ -174,6 +205,22 @@ does not match what you asked for, or the manual-only flag described below.
     **Ships as a template**: fill in the two paths at the top first, and skip it
     entirely if you keep no separate documentation, since it would have nothing to
     compare.
+  - [`security-audit`](../claude/skills/security-audit/) runs a hygiene pass over
+    the current project: whether `.gitignore` covers the twelve patterns, a
+    `gitleaks` scan, a grep for hardcoded credentials, and a check for sensitive
+    files git is **already tracking**, which the gitignore rules cannot undo.
+    Reports by severity with remediation. Ready to use as-is, and model-invocable
+    rather than manual only.
+  - [`audit-claude-config`](../claude/skills/audit-claude-config/) points the same
+    idea at `~/.claude/` itself, looking for secrets or PII that ended up in
+    memory files, settings, or transcripts. Worth running before you push a
+    dotfiles repo containing your Claude config anywhere public. Ready to use
+    as-is, model-invocable.
+
+  Those last two are why the pattern list is worth keeping in one shape: the same
+  twelve patterns appear in the `.gitignore`, in `validate-gitignore.sh`, in
+  `permissions.deny`, and in `security-audit`. Change one and change all four, or
+  they drift into disagreeing about what counts as a secret.
 
   **What "manual only" actually does.**
   Four of the five skills above carry `disable-model-invocation: true`:
