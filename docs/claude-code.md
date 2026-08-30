@@ -16,7 +16,7 @@ resumable, which is the point of everything below.
   "tui": "fullscreen",
   "theme": "dark",
   "attribution": { "commit": "", "pr": "", "sessionUrl": false },
-  "permissions": { "deny": ["Read(.env*)", "Read(~/.ssh/**)", "..."] }
+  "permissions": { "deny": ["Read(//**/.env*)", "Read(~/.ssh/**)", "..."] }
 }
 ```
 
@@ -48,36 +48,6 @@ resumable, which is the point of everything below.
   The full list is in
   [`claude/settings.example.json`](../claude/settings.example.json).
 
-  **Two patterns are deliberately narrower than they look, for the same reason the
-  substring globs are omitted below.** `credentials.{json,yml,yaml}` is named
-  rather than a `credentials*` prefix, because `credentials.ts` and
-  `credentials.service.ts` are ordinary auth-module filenames and a prefix glob
-  would make them unreadable in every project with no prompt to override. That is
-  the identical argument that keeps `**/*credential*` out of the list, so applying
-  it to one shape and not the other would have been incoherent. `.npmrc` is
-  filesystem-wide rather than home-only, because a project-level `.npmrc` carries
-  `_authToken` exactly as the home one does.
-
-  One collision is accepted rather than solved: `*.key` also matches Keynote
-  documents, on the platform this setup targets. Denying a `.key` is close to free
-  since a Keynote file is a binary bundle the Read tool cannot usefully show
-  anyway, so the rule stays broad.
-
-  ⚠️ **The two controls disagree about `.env.example`, and you should know which
-  way.** `.env*` matches `.env.example`, so the **Read tool** is denied on it
-  everywhere, while `block-secret-echo.sh` deliberately allows it and its refusal
-  message points you at "the committed `.env.example`" as the safe alternative.
-  Measured against the shipped hook, all three of `cp`, `cat` and the Read tool
-  pass the hook; it is the deny rule that closes the Read path. So inspecting a
-  committed example still works through Bash and not through the Read tool.
-
-  This cannot be patched with an exception: a deny rule carries no allowlist
-  carve-out, and deny is evaluated first, so an `allow` entry for `.env.example`
-  would not win. The alternatives are to enumerate real env filenames instead of
-  globbing (brittle, unbounded) or to accept the asymmetry. This setup accepts it,
-  on the grounds that a reference file is cheap to read another way while a
-  narrower glob risks missing a real one.
-
   **The patterns are anchored with `//`, and that matters more than it looks.** A
   bare pattern like `Read(.env*)` is resolved **relative to the directory the
   session started in**, so it covers that directory and everything under it and
@@ -94,6 +64,53 @@ resumable, which is the point of everything below.
   a subdirectory of a project that has a `.env` one or more levels up, ask Claude
   to read it: a refusal means the anchor is doing its job, and being shown the
   contents means it is not.
+
+  **Two patterns are deliberately narrower than they look, for the same reason the
+  substring globs are omitted below.** `credentials.{json,yml,yaml}` is named
+  rather than a `credentials*` prefix, because `credentials.ts` and
+  `credentials.service.ts` are ordinary auth-module filenames and a prefix glob
+  would make them unreadable in every project with no prompt to override. That is
+  the identical argument that keeps `**/*credential*` out of the list, so applying
+  it to one shape and not the other would have been incoherent. The cost is real
+  and worth naming: the named forms drop `credentials-prod.txt`, which is the very
+  filename `validate-gitignore.sh` uses as one of its probes. The two lists are
+  deliberately different, and this is one of the places that difference shows.
+  `.npmrc` is filesystem-wide rather than home-only, because a project-level
+  `.npmrc` carries `_authToken` exactly as the home one does.
+
+  One collision is accepted rather than solved: `*.key` also matches Keynote
+  documents, on the platform this setup targets. Denying a `.key` is close to free
+  since a Keynote file is a binary bundle the Read tool cannot usefully show
+  anyway, so the rule stays broad.
+
+  ⚠️ **`.env*` matches `.env.example` too, and that closes more than you would
+  expect.** Measured in a real session with these deny rules and a `.env.example`
+  in the working directory:
+
+  | how you reach the file | `block-secret-echo.sh` | deny rule |
+  |---|---|---|
+  | `Read` tool | pass | **denied** |
+  | `cat .env.example` | pass | **denied** |
+  | `sed -n 1p .env.example` | pass | **denied** |
+  | `cp .env.example ref.txt` | pass | **denied** |
+  | `python3 -c "print(open('.env.example').read())"` | pass | not denied, prompted |
+  | `git show HEAD:.env.example` | pass | **succeeds** |
+
+  So Bash is **not** an escape hatch: `cat` and `sed` are refused, which is what
+  the limits below predict, and `cp` is refused as well even though it displays
+  nothing. Read that table as the practical statement of what a deny rule means:
+  everything the harness recognises as reaching the file is closed, and the two
+  ways through are `git show`, which reads the blob rather than the path, and an
+  indirect subprocess, which is the gap ranked worst below.
+
+  This cannot be patched with an exception: a deny rule carries no allowlist
+  carve-out and deny is evaluated first, so an `allow` entry for `.env.example`
+  would not win. The alternatives are enumerating real env filenames instead of
+  globbing (brittle, unbounded) or accepting the asymmetry. This setup accepts it
+  and points the remedy at `git show HEAD:.env.example`, which is also what
+  `block-secret-echo.sh` now says when it refuses a command: an earlier wording
+  recommended copying or inspecting the committed example, and this table is why
+  that advice had to change.
 
   It resembles the `.gitignore` list and is **deliberately not the same list**, so
   do not sync the two mechanically. A gitignore pattern only decides what git
@@ -118,11 +135,14 @@ resumable, which is the point of everything below.
   bind the built-in **`Read`** and **`Edit`** tools, and reach some shell commands
   besides. Three gaps, worst first:
 
-  - **Indirect readers are explicitly out of scope.** The reference states the
-    rules do not apply to arbitrary subprocesses that read or write files
-    themselves, a Python or Node script that opens a file being the example given,
-    and points at the sandbox for OS-level enforcement. Nothing in a permissions
-    list stops `python3 -c` from opening a credential.
+  - **Indirect readers are explicitly out of scope, and this one is measured.** The
+    reference states the rules do not apply to arbitrary subprocesses that read or
+    write files themselves, a Python or Node script that opens a file being the
+    example given, and points at the sandbox for OS-level enforcement. Confirmed in
+    a real session: on a path where the `Read` tool, `cat`, `sed` and `cp` were all
+    refused, `python3 -c "print(open('.env.example').read())"` was **not denied**,
+    only prompted. So the deny list is not a barrier to a subprocess, it is a
+    barrier to the paths the harness recognises.
   - **Shell commands are partially covered and the boundary is fuzzy.** The
     reference says deny rules apply to file commands Claude Code recognises in
     Bash, "such as `cat`, `head`, `tail`, and `sed`". That is an open example

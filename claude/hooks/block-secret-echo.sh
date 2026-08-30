@@ -384,7 +384,13 @@ fi
 # Env files: decided in the parse pass (env_file), which splits per statement and
 # denies one that names a .env AND could display it. No check-ignore exemption is
 # needed: `git` is not a reader, so a check-ignore statement never reaches this.
-[ "${envfile_verdict:-}" = "BLOCK" ] && deny 'that command could display the contents of an env file; copy or inspect the committed .env.example instead'
+# THE REMEDY MUST SURVIVE THE DENY LIST, which the earlier wording did not.
+# "copy or inspect the committed .env.example" is dead advice next to a
+# permissions.deny carrying Read(//**/.env*): measured in a real session, the Read
+# tool, `cat`, `sed` and even `cp` are all refused on .env.example, so both halves
+# of that sentence fail. `git show` reads the blob rather than the path and passes
+# both this hook and the deny rule, so it is the one route that still works.
+[ "${envfile_verdict:-}" = "BLOCK" ] && deny 'that command could display the contents of an env file; read the committed reference with: git show HEAD:.env.example'
 
 # Profiles: decided in the parse pass (profile_v). A statement naming a shell
 # profile is denied unless it IS a bare `git check-ignore` (the check the secrets
