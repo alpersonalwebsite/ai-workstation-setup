@@ -44,10 +44,26 @@ resumable, which is the point of everything below.
   prompting: `.env*`, `*.env`, `secrets/**`, `credentials*`, `**/*.pem`,
   `**/*.key`, plus `~/.aws/credentials`, `~/.ssh/**` and `~/.config/gh/hosts.yml`,
   each denied for both `Read` and `Edit`. The full list is in
-  [`claude/settings.example.json`](../claude/settings.example.json). It is the same
-  list the `.gitignore` rules and `validate-gitignore.sh` use, which is deliberate:
-  one set of patterns, enforced at the three places a secret can escape (committed,
-  read, printed).
+  [`claude/settings.example.json`](../claude/settings.example.json).
+
+  It resembles the `.gitignore` list and is **deliberately not the same list**, so
+  do not sync the two mechanically. A gitignore pattern only decides what git
+  tracks; a deny rule decides what can be read at all, so breadth that is free in
+  one is expensive in the other. Three differences are load-bearing:
+
+  - **Substring globs are omitted.** `**/*secret*`, `**/*token*`, `**/*password*`
+    and `**/*credential*` are fine in a `.gitignore`. As deny rules they would
+    block ordinary source files, `token_parser.ts` for instance, with no prompt to
+    override.
+  - **Every path is listed twice**, once as `Read(...)` and once as `Edit(...)`,
+    because a `Read` deny rule does not cover `NotebookEdit`.
+  - **The gh rule is narrowed.** A `.gitignore` can carry a bare `**/hosts.yml`;
+    the deny rule names `~/.config/gh/hosts.yml` specifically, because `hosts.yml`
+    is also an ordinary Ansible inventory filename and a bare-filename deny rule
+    matches at any depth.
+
+  So adding a pattern to your `.gitignore` is a prompt to *consider* the deny list,
+  not to copy into it.
 
   ⚠️ **Know what this does not cover, or you will trust it too far.** These rules
   bind the built-in **`Read`** and **`Edit`** tools. They do not obviously extend
@@ -217,10 +233,12 @@ does not match what you asked for, or the manual-only flag described below.
     dotfiles repo containing your Claude config anywhere public. Ready to use
     as-is, model-invocable.
 
-  Those last two are why the pattern list is worth keeping in one shape: the same
-  twelve patterns appear in the `.gitignore`, in `validate-gitignore.sh`, in
-  `permissions.deny`, and in `security-audit`. Change one and change all four, or
-  they drift into disagreeing about what counts as a secret.
+  Those last two are why the pattern list is worth keeping in one shape. The same
+  twelve patterns appear in three places that **must** agree: the `.gitignore`,
+  `validate-gitignore.sh`, and `security-audit`. Change one and change all three,
+  or they drift into disagreeing about what counts as a secret. `permissions.deny`
+  is a fourth, closely related list that is deliberately **not** a member of that
+  set, for the reasons under [Claude Code settings](#claude-code-settings).
 
   **What "manual only" actually does.**
   Four of the five skills above carry `disable-model-invocation: true`:
