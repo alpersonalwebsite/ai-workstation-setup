@@ -83,9 +83,13 @@ resumable, which is the point of everything below.
   since a Keynote file is a binary bundle the Read tool cannot usefully show
   anyway, so the rule stays broad.
 
-  ⚠️ **`.env*` matches `.env.example` too, and that closes more than you would
-  expect.** Measured in a real session with these deny rules and a `.env.example`
-  in the working directory:
+  ⚠️ **`.env*` matches more than `.env`, and `.envrc` is the one that will bite
+  you.** `.env.example` is caught, which is mildly annoying; `.envrc` is direnv
+  configuration that by convention holds no secret values and that a developer
+  edits routinely, and it is now unreadable and unwritable in every project. That
+  this setup knows the file is special makes the omission worse, not better:
+  `security-audit` lists `*.envrc` as its own pathspec precisely because the other
+  globs miss it. Measured in a real session with these deny rules:
 
   | how you reach the file | `block-secret-echo.sh` | deny rule |
   |---|---|---|
@@ -98,6 +102,9 @@ resumable, which is the point of everything below.
   | `cp .env.example .env` | pass | **denied** |
   | `printf 'A=1\n' > .env2` | pass | **denied** |
   | `git show HEAD:.env.example > .env3` | pass | **denied** |
+  | `cat .envrc` | pass | **denied** |
+  | `Read` tool on `.envrc` | pass | **denied** |
+  | `printf 'x\n' >> .envrc` | pass | **denied** |
 
   So Bash is **not** an escape hatch: `cat` and `sed` are refused, which is what
   the limits below predict, and `cp` is refused as well even though it displays
@@ -106,12 +113,28 @@ resumable, which is the point of everything below.
   way through on the read side is `git show`, which reads the blob rather than the
   path, plus an indirect subprocess, which is the gap ranked worst below.
 
+  **On the apparent contradiction with the limits list below**, which says to
+  assume the shell path is open: both are correct and they answer different
+  questions. The table is a **measurement** of the specific commands the
+  permissions reference names, and those are closed. The list is a **posture**,
+  and it is cautious because the reference's list is open-ended ("such as `cat`,
+  `head`, `tail`, and `sed`"), so the next command you reach for may not be on it.
+  Measured closed for what is named; treated as open because the naming is not
+  exhaustive.
+
   **The `Edit` half closes creating a `.env` at all**, which is the part most
   likely to surprise you in daily use. `cp .env.example .env` is the normal way a
   project is set up, and under these rules it is refused, as is any redirect that
   writes the file, `git show … > .env` included. There is no route through: unlike
   the read side, `git show` does not help, because the refusal is on the write.
-  **So create and edit your `.env` outside Claude.** That is the intended
+  **So create and edit your `.env` outside Claude** — and the same goes for
+  `.envrc`, which is the case you are more likely to hit, since a direnv file gets
+  edited as work proceeds rather than once at setup. If that trade is wrong for
+  you, the narrower rule is to drop the `*` and deny `//**/.env` plus the specific
+  suffixed names you use, at the cost of missing any name you forget. That is the
+  gap the substring globs were omitted to avoid, in the other direction.
+
+  That is the intended
   consequence rather than a gap, but it is worth knowing before you adopt the file
   and wonder why project setup stopped working.
 
