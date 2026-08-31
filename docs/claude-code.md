@@ -95,13 +95,25 @@ resumable, which is the point of everything below.
   | `cp .env.example ref.txt` | pass | **denied** |
   | `python3 -c "print(open('.env.example').read())"` | pass | not denied, prompted |
   | `git show HEAD:.env.example` | pass | **succeeds** |
+  | `cp .env.example .env` | pass | **denied** |
+  | `printf 'A=1\n' > .env2` | pass | **denied** |
+  | `git show HEAD:.env.example > .env3` | pass | **denied** |
 
   So Bash is **not** an escape hatch: `cat` and `sed` are refused, which is what
   the limits below predict, and `cp` is refused as well even though it displays
   nothing. Read that table as the practical statement of what a deny rule means:
-  everything the harness recognises as reaching the file is closed, and the two
-  ways through are `git show`, which reads the blob rather than the path, and an
-  indirect subprocess, which is the gap ranked worst below.
+  everything the harness recognises as reaching the file is closed, and the only
+  way through on the read side is `git show`, which reads the blob rather than the
+  path, plus an indirect subprocess, which is the gap ranked worst below.
+
+  **The `Edit` half closes creating a `.env` at all**, which is the part most
+  likely to surprise you in daily use. `cp .env.example .env` is the normal way a
+  project is set up, and under these rules it is refused, as is any redirect that
+  writes the file, `git show … > .env` included. There is no route through: unlike
+  the read side, `git show` does not help, because the refusal is on the write.
+  **So create and edit your `.env` outside Claude.** That is the intended
+  consequence rather than a gap, but it is worth knowing before you adopt the file
+  and wonder why project setup stopped working.
 
   This cannot be patched with an exception: a deny rule carries no allowlist
   carve-out and deny is evaluated first, so an `allow` entry for `.env.example`

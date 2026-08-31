@@ -367,9 +367,18 @@ fi
 # Two classes, deliberately different. A SHELL PROFILE is never something a
 # session needs to open, so it is a blanket deny. A repo env file under a
 # secrets-manager reference pattern (e.g. 1Password's op:// references) holds
-# references rather than values and gets created by `cp .env.example .env`, so
-# blanket-denying it blocks the setup step itself. For those, deny only commands
-# that could DISPLAY the contents; cp, mv and chmod reveal nothing and are allowed.
+# references rather than values, so this rule denies only commands that could
+# DISPLAY the contents; cp, mv and chmod reveal nothing and pass THIS hook.
+#
+# THE ORIGINAL REASON FOR THAT SPLIT NO LONGER HOLDS, and the comment used to
+# claim it did: that blanket-denying this class blocked the setup step itself, the
+# setup step being `cp .env.example .env`. Measured against a settings file
+# carrying Edit(//**/.env*): `cp .env.example .env` is REFUSED, and so are
+# `printf 'A=1\n' > .env2` and `git show HEAD:.env.example > .env3`. The deny rule
+# closes the write side whatever this hook decides, so allowing cp here does not
+# keep the setup step working. The split is retained because a hook that refuses
+# cp would be wrong on its own terms (cp discloses nothing), not because it
+# preserves a workflow it cannot preserve. Create the file outside Claude.
 
 # The env-file reader detection (which command names count, the "not a filename
 # character" delimiter class, the `.env` shape, and the `.` source builtin) now
