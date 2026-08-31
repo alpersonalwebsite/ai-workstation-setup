@@ -14,7 +14,9 @@ resumable, which is the point of everything below.
 {
   "cleanupPeriodDays": 365,
   "tui": "fullscreen",
-  "theme": "dark"
+  "theme": "dark",
+  "attribution": { "commit": "", "pr": "", "sessionUrl": false },
+  "permissions": { "deny": ["Read(//**/.env*)", "Read(~/.ssh/**)", "..."] }
 }
 ```
 
@@ -33,6 +35,164 @@ resumable, which is the point of everything below.
   pair is for 16-colour terminals and `-daltonized` for colour-vision deficiency.
   Since `dark` is already the default, setting it is explicitness rather than a
   change; `auto` is the one to use if you want it to follow the system appearance.
+- **`attribution`** turns a rule into enforcement. `CLAUDE.example.md` asks for no
+  AI attribution in commits and PRs, but an instruction is advice the model can
+  drift from. Setting `commit` and `pr` to the empty string and `sessionUrl` to
+  `false` moves that from something you ask for to something the harness applies,
+  the same reason the hooks below exist.
+- **`permissions.deny`** refuses whole classes of file outright, rather than
+  prompting: the dotenv globs, `secrets/**`, `credentials.{json,yml,yaml}`, `*.pem`,
+  `*.key`, `.npmrc`, plus the credential stores under `~` (`.ssh/**`,
+  `.aws/credentials`, `.aws/sso/cache/**`, `.config/gh/hosts.yml`, `.netrc`,
+  `.docker/config.json`, `.kube/config`), each denied for both `Read` and `Edit`.
+  The full list is in
+  [`claude/settings.example.json`](../claude/settings.example.json).
+
+  **The patterns are anchored with `//`, and that matters more than it looks.** A
+  bare pattern like `Read(.env*)` is resolved **relative to the directory the
+  session started in**, so it covers that directory and everything under it and
+  nothing above it. Start Claude in `repo/services/api` and a relative rule does
+  not cover `repo/.env` one level up. Since this file is user-level settings
+  (`~/.claude/settings.json`) rather than a per-project file, it should hold
+  wherever you launch, so the entries use the `//` absolute anchor, which the
+  permissions reference describes as matching anywhere on the filesystem. The `~`
+  entries are already absolute and need no anchor.
+
+  ⚠️ **Confirm this on your own machine rather than trusting the file.** Anchor
+  syntax is the part of this most likely to be wrong after a version bump, and a
+  deny rule that silently matches nothing looks exactly like one that works. From
+  a subdirectory of a project that has a `.env` one or more levels up, ask Claude
+  to read it: a refusal means the anchor is doing its job, and being shown the
+  contents means it is not.
+
+  **Two patterns are deliberately narrower than they look, for the same reason the
+  substring globs are omitted below.** `credentials.{json,yml,yaml}` is named
+  rather than a `credentials*` prefix, because `credentials.ts` and
+  `credentials.service.ts` are ordinary auth-module filenames and a prefix glob
+  would make them unreadable in every project with no prompt to override. That is
+  the identical argument that keeps `**/*credential*` out of the list, so applying
+  it to one shape and not the other would have been incoherent. The cost is real
+  and worth naming: the named forms drop `credentials-prod.txt`, which is the very
+  filename `validate-gitignore.sh` uses as one of its probes. The two lists are
+  deliberately different, and this is one of the places that difference shows.
+  `.npmrc` is filesystem-wide rather than home-only, because a project-level
+  `.npmrc` carries `_authToken` exactly as the home one does.
+
+  One collision is accepted rather than solved: `*.key` also matches Keynote
+  documents, on the platform this setup targets. Denying a `.key` is close to free
+  since a Keynote file is a binary bundle the Read tool cannot usefully show
+  anyway, so the rule stays broad.
+
+  ⚠️ **`.env*` matches more than `.env`, and `.envrc` is the one that will bite
+  you.** `.env.example` is caught, which is mildly annoying; `.envrc` is direnv
+  configuration that by convention holds no secret values and that a developer
+  edits routinely, and it is now unreadable and unwritable in every project. That
+  this setup knows the file is special makes the omission worse, not better:
+  `security-audit` lists `*.envrc` as its own pathspec precisely because the other
+  globs miss it. Measured in a real session with these deny rules:
+
+  | how you reach the file | `block-secret-echo.sh` | deny rule |
+  |---|---|---|
+  | `Read` tool | pass | **denied** |
+  | `cat .env.example` | pass | **denied** |
+  | `sed -n 1p .env.example` | pass | **denied** |
+  | `cp .env.example ref.txt` | pass | **denied** |
+  | `python3 -c "print(open('.env.example').read())"` | pass | not denied, prompted |
+  | `git show HEAD:.env.example` | pass | **succeeds** |
+  | `cp .env.example .env` | pass | **denied** |
+  | `printf 'A=1\n' > .env2` | pass | **denied** |
+  | `git show HEAD:.env.example > .env3` | pass | **denied** |
+  | `cat .envrc` | pass | **denied** |
+  | `Read` tool on `.envrc` | pass | **denied** |
+  | `printf 'x\n' >> .envrc` | pass | **denied** |
+
+  So Bash is **not** an escape hatch: `cat` and `sed` are refused, which is what
+  the limits below predict, and `cp` is refused as well even though it displays
+  nothing. Read that table as the practical statement of what a deny rule means:
+  everything the harness recognises as reaching the file is closed, and the only
+  way through on the read side is `git show`, which reads the blob rather than the
+  path, plus an indirect subprocess, which is the gap ranked worst below.
+
+  **On the apparent contradiction with the limits list below**, which says to
+  assume the shell path is open: both are correct and they answer different
+  questions. The table is a **measurement** of the specific commands the
+  permissions reference names, and those are closed. The list is a **posture**,
+  and it is cautious because the reference's list is open-ended ("such as `cat`,
+  `head`, `tail`, and `sed`"), so the next command you reach for may not be on it.
+  Measured closed for what is named; treated as open because the naming is not
+  exhaustive.
+
+  **The `Edit` half closes creating a `.env` at all**, which is the part most
+  likely to surprise you in daily use. `cp .env.example .env` is the normal way a
+  project is set up, and under these rules it is refused, as is any redirect that
+  writes the file, `git show … > .env` included. There is no route through: unlike
+  the read side, `git show` does not help, because the refusal is on the write.
+  **So create and edit your `.env` outside Claude** — and the same goes for
+  `.envrc`, which is the case you are more likely to hit, since a direnv file gets
+  edited as work proceeds rather than once at setup. If that trade is wrong for
+  you, the narrower rule is to drop the `*` and deny `//**/.env` plus the specific
+  suffixed names you use, at the cost of missing any name you forget. That is the
+  gap the substring globs were omitted to avoid, in the other direction.
+
+  That is the intended
+  consequence rather than a gap, but it is worth knowing before you adopt the file
+  and wonder why project setup stopped working.
+
+  This cannot be patched with an exception: a deny rule carries no allowlist
+  carve-out and deny is evaluated first, so an `allow` entry for `.env.example`
+  would not win. The alternatives are enumerating real env filenames instead of
+  globbing (brittle, unbounded) or accepting the asymmetry. This setup accepts it
+  and points the remedy at `git show HEAD:.env.example`, which is also what
+  `block-secret-echo.sh` now says when it refuses a command: an earlier wording
+  recommended copying or inspecting the committed example, and this table is why
+  that advice had to change.
+
+  It resembles the `.gitignore` list and is **deliberately not the same list**, so
+  do not sync the two mechanically. A gitignore pattern only decides what git
+  tracks; a deny rule decides what can be read at all, so breadth that is free in
+  one is expensive in the other. Three differences are load-bearing:
+
+  - **Substring globs are omitted.** `**/*secret*`, `**/*token*`, `**/*password*`
+    and `**/*credential*` are fine in a `.gitignore`. As deny rules they would
+    block ordinary source files, `token_parser.ts` for instance, with no prompt to
+    override.
+  - **Every path is listed twice**, once as `Read(...)` and once as `Edit(...)`,
+    because a `Read` deny rule does not cover `NotebookEdit`.
+  - **The gh rule is narrowed.** A `.gitignore` can carry a bare `**/hosts.yml`;
+    the deny rule names `~/.config/gh/hosts.yml` specifically, because `hosts.yml`
+    is also an ordinary Ansible inventory filename and a bare-filename deny rule
+    matches at any depth.
+
+  So adding a pattern to your `.gitignore` is a prompt to *consider* the deny list,
+  not to copy into it.
+
+  ⚠️ **Know what this does not cover, or you will trust it too far.** These rules
+  bind the built-in **`Read`** and **`Edit`** tools, and reach some shell commands
+  besides. Three gaps, worst first:
+
+  - **Indirect readers are explicitly out of scope, and this one is measured.** The
+    reference states the rules do not apply to arbitrary subprocesses that read or
+    write files themselves, a Python or Node script that opens a file being the
+    example given, and points at the sandbox for OS-level enforcement. Confirmed in
+    a real session: on a path where the `Read` tool, `cat`, `sed` and `cp` were all
+    refused, `python3 -c "print(open('.env.example').read())"` was **not denied**,
+    only prompted. So the deny list is not a barrier to a subprocess, it is a
+    barrier to the paths the harness recognises.
+  - **Shell commands are partially covered and the boundary is fuzzy.** The
+    reference says deny rules apply to file commands Claude Code recognises in
+    Bash, "such as `cat`, `head`, `tail`, and `sed`". That is an open example
+    list, not an exhaustive one, so whether `grep` is included is **undocumented**
+    rather than excluded. Either way the safe posture is the same: assume the
+    shell path is open and do not rely on the deny list to close it.
+  - **Extension rules miss extensionless files.** `*.pem` and `*.key` match on
+    extension, so a key named `id_rsa` is covered only by the `~/.ssh/**` entry.
+
+  The first two are exactly why `block-secret-echo.sh` runs as a `PreToolUse` hook
+  on `Bash`: two independent controls, because neither covers the whole surface.
+
+  This is a **deny** list only. The example file still sets no `permissions.allow`,
+  for the reason given under [Claude Code config and skills](#claude-code-config-and-skills):
+  a grant shipped without its reasoning is worse than no grant.
 
 The hooks that enforce this posture (secret-scanning, gitignore validation) now
 ship here too, along with a settings file that wires them, the status line, the
@@ -152,7 +312,7 @@ does not match what you asked for, or the manual-only flag described below.
   `SKILL.md` that Claude invokes when a task matches its description, unless it
   opts out with `disable-model-invocation: true`. That opt-out is what **manual
   only** means below, and it is stronger than the name suggests, so read the note
-  that follows the five skills before copying them.
+  that follows the seven skills before copying them.
   - [`writing-voice`](../claude/skills/writing-voice/) captures your writing
     voice across professional and personal registers so drafts sound like you.
     It ships as a template.
@@ -174,9 +334,37 @@ does not match what you asked for, or the manual-only flag described below.
     **Ships as a template**: fill in the two paths at the top first, and skip it
     entirely if you keep no separate documentation, since it would have nothing to
     compare.
+  - [`security-audit`](../claude/skills/security-audit/) runs a hygiene pass over
+    the current project: whether `.gitignore` covers the twelve patterns, a
+    `gitleaks` scan, a grep for hardcoded credentials, and a check for sensitive
+    files git is **already tracking**, which the gitignore rules cannot undo.
+    Reports by severity with remediation. Ready to use as-is, and model-invocable
+    rather than manual only.
+  - [`audit-claude-config`](../claude/skills/audit-claude-config/) points the same
+    idea at `~/.claude/` itself, looking for secrets or PII in memory files and
+    settings, plus a `gitleaks` sweep of the whole directory that covers
+    transcripts incidentally. Worth running before you push a dotfiles repo
+    containing your Claude config anywhere public. Ready to use as-is,
+    model-invocable.
+
+  Those two are the only skills here that both run shell commands **and** can be
+  invoked by Claude on its own, so their `allowed-tools` are scoped to the exact
+  commands they need (`Bash(gitleaks:*)`, `Bash(git ls-files:*)`) rather than a
+  bare `Bash`. That distinction is worth understanding before you write your own:
+  `allowed-tools` **grants without prompting**, it does not restrict. A bare `Bash`
+  on a model-invocable skill means Claude can decide to run the skill and then run
+  any shell command inside it with no prompt. Check that line on every skill you
+  copy from anyone, including this repo.
+
+  Those last two are why the pattern list is worth keeping in one shape. The same
+  twelve patterns appear in three places that **must** agree: the `.gitignore`,
+  `validate-gitignore.sh`, and `security-audit`. Change one and change all three,
+  or they drift into disagreeing about what counts as a secret. `permissions.deny`
+  is a fourth, closely related list that is deliberately **not** a member of that
+  set, for the reasons under [Claude Code settings](#claude-code-settings).
 
   **What "manual only" actually does.**
-  Four of the five skills above carry `disable-model-invocation: true`:
+  Four of the seven skills above carry `disable-model-invocation: true`:
   `fact-check`, `fill-claude-md`, `rca` and `sync-config-docs`. The name reads as
   though it only suppresses *automatic* loading, leaving a deliberate call
   available. It does not. Measured against the loader on Claude Code 2.1.226 with
