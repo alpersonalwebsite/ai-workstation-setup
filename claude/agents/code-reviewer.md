@@ -31,7 +31,7 @@ it lists, and use `git diff main...HEAD` for a branch or `gh pr diff <n>` for a 
      secrets written to source.
    - Commit messages and PR descriptions are **descriptive**: what changed and why,
      enough that a reader understands the scope without opening the diff. When
-     several files change, say what changed in each or group them.
+     several files change, say what changed in each, or group them by change.
    - **Voice and AI attribution** follow whatever your own `CLAUDE.md` says. No
      specific rule is named here on purpose: those two are preferences rather than
      defects, they are yours to set, and `CLAUDE.example.md` tells you to decide

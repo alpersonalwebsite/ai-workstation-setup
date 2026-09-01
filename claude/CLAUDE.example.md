@@ -35,7 +35,8 @@ in context. The rules below are a sensible starting point. Adapt them to you.
 ## Git hygiene
 
 - Write descriptive commit and PR messages: what changed and why, enough that a
-  reader understands the scope without opening the diff.
+  reader understands the scope without opening the diff. When several files
+  change, say what changed in each, or group them by change.
 - On shared repositories, branch and open a PR rather than committing straight
   to the main branch.
 - Decide your own policy on AI-assistance attribution in commit messages, and be
