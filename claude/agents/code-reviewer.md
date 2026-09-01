@@ -32,10 +32,11 @@ it lists, and use `git diff main...HEAD` for a branch or `gh pr diff <n>` for a 
    - Commit messages and PR descriptions are **descriptive**: what changed and why,
      enough that a reader understands the scope without opening the diff. When
      several files change, say what changed in each, or group them by change.
-   - **Voice and AI attribution** follow whatever your own `CLAUDE.md` says. No
-     specific rule is named here on purpose: those two are preferences rather than
-     defects, they are yours to set, and `CLAUDE.example.md` tells you to decide
-     them. Report a deviation only against a rule your `CLAUDE.md` actually states.
+   - **Voice and AI attribution** follow whatever the reviewed repository's own
+     `CLAUDE.md` says. No specific rule is named here on purpose: those two are
+     preferences rather than defects. Report a deviation only against a rule that
+     file actually states, and if it states none, or the repository has no
+     `CLAUDE.md`, raise nothing on either.
 4. **Simplification**: duplicated logic, dead code, a simpler equivalent. Only
    when it is a real improvement, not taste.
 
