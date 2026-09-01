@@ -15,7 +15,6 @@ resumable, which is the point of everything below.
   "cleanupPeriodDays": 365,
   "tui": "fullscreen",
   "theme": "dark",
-  "attribution": { "commit": "", "pr": "", "sessionUrl": false },
   "permissions": { "deny": ["Read(//**/.env*)", "Read(~/.ssh/**)", "..."] }
 }
 ```
@@ -35,11 +34,26 @@ resumable, which is the point of everything below.
   pair is for 16-colour terminals and `-daltonized` for colour-vision deficiency.
   Since `dark` is already the default, setting it is explicitness rather than a
   change; `auto` is the one to use if you want it to follow the system appearance.
-- **`attribution`** turns a rule into enforcement. `CLAUDE.example.md` asks for no
-  AI attribution in commits and PRs, but an instruction is advice the model can
-  drift from. Setting `commit` and `pr` to the empty string and `sessionUrl` to
-  `false` moves that from something you ask for to something the harness applies,
-  the same reason the hooks below exist.
+- **`attribution` is deliberately NOT set here**, and it is worth saying why, since
+  an earlier version of this file shipped it. The key suppresses the AI-assistance
+  trailer in commits and PR bodies. That is an editorial preference rather than a
+  security property, and it is the one category this template keeps out: everything
+  else here is security or reproducibility, and the voice skill ships as a skeleton
+  for the same reason.
+
+  The asymmetry decides it. Shipping the key means a reader who copies this file
+  silently stops disclosing AI assistance, possibly against a project or employer
+  policy, and the whole point of the setting is that nothing appears, so they may
+  never notice. Leaving it out means a trailer shows up, which they see at once and
+  can remove with three lines. Take the visible, recoverable error.
+
+  So the choice stays with you, which is also what
+  [`CLAUDE.example.md`](../claude/CLAUDE.example.md) says: decide your own policy
+  and be consistent about it. If yours is "no trailer", add:
+
+  ```json
+  "attribution": { "commit": "", "pr": "", "sessionUrl": false }
+  ```
 - **`permissions.deny`** refuses whole classes of file outright, rather than
   prompting: the dotenv globs, `secrets/**`, `credentials.{json,yml,yaml}`, `*.pem`,
   `*.key`, `.npmrc`, plus the credential stores under `~` (`.ssh/**`,

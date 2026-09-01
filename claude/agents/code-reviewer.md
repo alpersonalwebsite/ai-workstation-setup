@@ -29,8 +29,11 @@ it lists, and use `git diff main...HEAD` for a branch or `gh pr diff <n>` for a 
      regression. Say so.
    - `.gitignore` covers secrets and build junk before any add or commit; no
      secrets written to source.
-   - No em dashes in authored text; commit and PR messages are descriptive and
-     free of AI attribution.
+   - Authored text, commit messages and PR descriptions follow whatever **your own
+     `CLAUDE.md`** says about voice and about AI attribution. No specific rule is
+     named here on purpose: those are preferences rather than defects, they are
+     yours to set, and `CLAUDE.example.md` tells you to decide them. Report a
+     deviation only against a rule your `CLAUDE.md` actually states.
 4. **Simplification**: duplicated logic, dead code, a simpler equivalent. Only
    when it is a real improvement, not taste.
 
