@@ -35,11 +35,6 @@
       "Edit(~/.kube/config)"
     ]
   },
-  "attribution": {
-    "commit": "",
-    "pr": "",
-    "sessionUrl": false
-  },
   "hooks": {
     "PreToolUse": [
       {
