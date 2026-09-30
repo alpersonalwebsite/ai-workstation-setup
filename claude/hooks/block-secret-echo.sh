@@ -195,6 +195,55 @@ ps_verdict = "OK"
 for st in re.split(r";|&&|\|\||&(?!>)|\n", ti.get("command") or ""):  # RAW cmd; newline splits; & but not &>
     if stmt_block(st):
         ps_verdict = "BLOCK"; break
+# Rule 7 (a credential returned by an API) is decided HERE, per statement, for the
+# SAME reason rule 6 is, and the first version made exactly the mistake that the
+# rule 6 comment already warns about: it grepped the WHOLE LINE, so any sink token
+# anywhere satisfied it. Measured on the shipped hook, all four printed the
+# credential and all four were allowed:
+#     shasum -a 256 /tmp/other && gh api .../hooks/1 -q .config.url
+#     echo start > /tmp/run.log && <same call>
+#     <same call> ; shasum -a 256 /tmp/other
+#     <same call>   # later: shasum -a 256 x
+# The same whole-line read defeated the names-a-field hardening from the other
+# side. A grep -q earlier in the line was taken as the selector: with a dotted
+# needle it allowed the identity form, and with a plain needle it REFUSED a
+# legitimate .id call. A guard that narrows working input is a regression, so that
+# direction matters as much as the fail-open.
+#
+# Splitting is on STATEMENT separators only, never on a bare pipe: a pipeline is
+# one statement, because a gh call piped to a digest consumes its own output and
+# must stay allowed. Comments are stripped first, quote-aware, so a trailing
+# hash comment cannot donate a sink while an inline sed using hash delimiters
+# keeps them.
+# (No literal single quote anywhere below: this whole program is a single-quoted
+# -c argument, and one apostrophe ends it. That is exactly how this rule broke
+# the hook once already.)
+GH_SINK  = re.compile(r"shasum|sha256sum|\bmd5\b|wc -c|wc -m|(?:^|\s)1?>[^&]")
+GH_HOOKS = re.compile(r"(?:repos|repositories)/[^ \x22\x27]*/hooks|orgs/[^ \x22\x27]*/hooks")
+GH_CFG   = re.compile(r"\.config(?:\.(?:url|secret))?(?:[^A-Za-z0-9_.]|$)")
+GH_SEL   = re.compile(r"(?:-q|--jq)(?:[\s=]+)(\x27[^\x27]*\x27|\x22[^\x22]*\x22|[^\s]+)")
+GH_FIELD = re.compile(r"\.[A-Za-z_]")
+GH_CALL  = re.compile(r"\bgh\b[^|]*\bapi\b")
+def strip_comment(st):
+    q = None
+    for i, ch in enumerate(st):
+        if q:
+            if ch == q: q = None
+            continue
+        if ch in "\x27\x22": q = ch; continue
+        if ch == "#" and (i == 0 or st[i-1].isspace()): return st[:i]
+    return st
+gh_verdict = "OK"
+for st in re.split(r";|&&|\|\||&(?!>)|\n", ti.get("command") or ""):
+    st = strip_comment(st)
+    if not GH_CALL.search(st): continue
+    if GH_SINK.search(st): continue          # consumed within THIS statement
+    if GH_CFG.search(st):
+        gh_verdict = "CONFIG"; break
+    if GH_HOOKS.search(st):
+        m = GH_SEL.search(st)                # the selector from THIS statement only
+        if not GH_FIELD.search(m.group(1) if m else ""):
+            gh_verdict = "HOOKS"; break
 # Rules 2b, 3 and 4 also turn on "command position", and used to re-derive it in
 # three separate grep regexes that each got it subtly wrong: a mid-path component
 # counted as the verb (so /usr/local/opt/node/.env, `ls ./env`, `cd /a/b/env`,
@@ -264,6 +313,7 @@ print(envdump_v)
 print(envfile_v)
 print(printname_v)
 print(profile_v)
+print(gh_verdict)
 print("END")' "$SECRET_RE" 2>/dev/null)
 
 # FAIL CLOSED. Measured before this existed: with the shell utilities present and
@@ -298,6 +348,8 @@ rest=${rest#*$'\n'}
 printname_verdict=${rest%%$'\n'*}
 rest=${rest#*$'\n'}
 profile_verdict=${rest%%$'\n'*}
+rest=${rest#*$'\n'}
+gh_verdict=${rest%%$'\n'*}
 
 # Reading a profile or env file wholesale displays every value in it. Applies
 # to Read/NotebookEdit style tools, which carry file_path rather than command.
@@ -458,40 +510,28 @@ fi
 #    looked like they worked: one stripped only a URL's query string while the token
 #    was in its path, and one redacted the field correctly and then printed the
 #    URL's host and path separately from a variable holding it.
-_GH_SINK='(shasum|sha256sum|md5|wc -c|wc -m|(^|[[:space:]])1?>[^&])'
-if printf '%s' "$cmd" | grep -qE '\bgh\b[^|]*\bapi\b'; then
-  # 7a. An explicit reach into .config: the url, the secret, or the whole object,
-  #     which carries the url inside it.
-  if printf '%s' "$cmd" | grep -qE '\.config(\.(url|secret))?([^A-Za-z0-9_.]|$)'; then
-    printf '%s' "$cmd" | grep -qE "$_GH_SINK" \
-      || deny 'a gh api call selecting .config would print a credential; redirect it to a file (> file) or pipe it to a digest'
-  fi
-  # 7b. A hooks endpoint that prints the whole object discloses the credential
-  #     without .config ever being named.
-  #
-  #     ⚠️ THE TEST IS "NAMES A FIELD", NOT "HAS A SELECTOR". Testing merely for
-  #     the PRESENCE of -q/--jq leaves `-q '.'` allowed, which is two characters
-  #     from the blocked form and prints the same bytes; `-q '.[]'` and `-q '.[0]'`
-  #     likewise. So the selector must reference at least one FIELD (a dot followed
-  #     by an identifier). `.`, `.[]` and `.[0]` name none and are refused;
-  #     `.id, .active` and `.[] | .status_code` pass. Conservative by construction:
-  #     a selector this cannot read as field-naming is refused, not allowed.
-  #
-  #     ⚠️ THE ANCHOR COVERS EVERY SPELLING OF THE SAME RESOURCE. Matching only
-  #     `repos/` misses `orgs/<org>/hooks` and the numeric `repositories/<id>/hooks`
-  #     alias, both of which reach a webhook object with the same stored credential.
-  #     The org endpoint matters for anyone whose repositories live under one.
-  #     Widening costs nothing against the false-positive case, since a path such as
-  #     scripts/git-hooks/... still has no "/hooks" path segment.
-  if printf '%s' "$cmd" | grep -qE "(repos|repositories)/[^ \"']*/hooks|orgs/[^ \"']*/hooks"; then
-    if ! printf '%s' "$cmd" | grep -qE "$_GH_SINK"; then
-      _sel=$(printf '%s' "$cmd" \
-             | grep -oE "(-q|--jq)([[:space:]]|=)+('[^']*'|\"[^\"]*\"|[^[:space:]]+)" | head -1)
-      printf '%s' "$_sel" | grep -qE '\.[A-Za-z_]' \
-        || deny 'a gh api call on a hooks endpoint prints the stored credential unless the selector names a field; use -q with a field (.id, .active), redirect to a file, or pipe to a digest'
-    fi
-  fi
-fi
+# 7a and 7b are DECIDED IN THE PARSE PASS ABOVE, per statement, for the same
+# reason rule 6 is, and the reasoning lives there beside the code. This is only
+# the verdict.
+#
+# ⚠️ THE FIRST VERSION DECIDED THEM HERE, WITH grep AGAINST THE WHOLE LINE, and
+# that was wrong in both directions. Any sink token anywhere on the line satisfied
+# the check, so `shasum -a 256 /tmp/other && gh api …/hooks/1 -q .config.url`
+# printed the credential and was ALLOWED, as were a preceding redirect, a trailing
+# `; shasum …`, and a trailing comment mentioning one. The same whole-line read
+# also took a `-q` belonging to an earlier command as the selector, which both
+# defeated the names-a-field test and REFUSED a legitimate `-q .id` that followed
+# a `grep -q needle`. Four fail-opens and one fail-closed from one scope error.
+#
+# ⚠️ AND THE SUITE DID NOT CATCH ANY OF IT: all 16 rule 7 cases were single
+# command lines, so none exercised the scope the bug turned on. Multi-statement
+# cases are now pinned in both directions.
+case "${gh_verdict:-OK}" in
+  CONFIG)
+    deny 'a gh api call selecting .config would print a credential; redirect it to a file (> file) or pipe it to a digest IN THE SAME STATEMENT. NOT a capture: $(...) is not a sink here' ;;
+  HOOKS)
+    deny 'a gh api call on a hooks endpoint prints the stored credential unless the selector names a field; use -q with a field (.id, .active), or redirect/digest in the same statement' ;;
+esac
 
 # 7c. WRITING a credential as a literal discloses it in the COMMAND TEXT, which is
 #     recorded even when nothing is printed. This is the rotation path, so it is the
@@ -501,7 +541,7 @@ fi
 #     such text with an editor tool rather than a shell heredoc.
 if printf '%s' "$cmd" | grep -qE 'config\[(url|secret)\]='; then
   printf '%s' "$cmd" | grep -qE 'config\[(url|secret)\]=("?\$\(|"?\$\{|"?\$[A-Za-z_]|`)' \
-    || deny 'a webhook url or secret written as a literal appears in the command text; pass it from a file instead'
+    || deny 'a webhook url or secret written as a literal appears in the command text; pass it from a file AND silence the response, since the write echoes the updated object and 7b refuses the call without a redirect'
 fi
 
 exit 0

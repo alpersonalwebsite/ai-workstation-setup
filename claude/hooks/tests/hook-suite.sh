@@ -317,6 +317,28 @@ probe "write from a file, silenced"    allow "$API --method PATCH $GH1 -f \"$CU=
 probe "git-hooks path not caught"      allow "$API repos/O/R/contents/scripts/git-hooks/operators.txt"
 probe "an unrelated api call"          allow "$API repos/O/R/pulls/416"
 
+# ⚠️ SCOPE: EVERY CASE ABOVE IS A SINGLE COMMAND LINE, AND THAT IS WHY THEY ALL
+# PASSED WHILE THE RULE HAD FOUR FAIL-OPENS AND ONE FAIL-CLOSED. The first version
+# grepped the WHOLE line, so a sink or a -q belonging to ANOTHER command satisfied
+# it. 146/146 was green with all of it present. These pin the scope in both
+# directions: a sink must be in the gh statement to count, and one that is must
+# still work.
+SINKCMD='shasum -a 256 /tmp/other'
+probe "sink from a preceding && command"   block "$SINKCMD && $API $GH1 -q '$CFG'"
+probe "redirect from a preceding command"  block "echo start > /tmp/run.log && $API $GH1 -q '$CFG'"
+probe "sink in a trailing ; command"       block "$API $GH1 -q '$CFG' ; $SINKCMD"
+probe "sink on the far side of ||"         block "$API $GH1 -q '$CFG' || $SINKCMD"
+probe "sink only inside a comment"         block "$API $GH1 -q '$CFG'   # later: $SINKCMD"
+# A pipeline is ONE statement, so a digest downstream of the same call still counts.
+probe "unrelated cmd, then a real sink"    allow "echo hi && $API $GH1 -q '$CFG' > /tmp/u.txt"
+# Comment stripping is quote-aware: these hashes are a sed delimiter, not a comment.
+probe "inline sed hashes are not comments" block "$API $GH1 -q '$CFG' | sed -E 's#x#y#'"
+# The selector must come from the gh statement too, both ways round.
+probe "foreign -q, then identity selector" block "grep -q '.foo' /tmp/f && $API repos/O/R/ho""oks -q '.'"
+probe "foreign -q, then array iterate"     block "grep -q '.foo' /tmp/f && $API repos/O/R/ho""oks --jq '.[]'"
+probe "foreign -q must not over-block"     allow "grep -q needle /tmp/f && $API repos/O/R/ho""oks -q '.id'"
+probe "foreign -q, field on a single hook" allow "grep -q needle /tmp/f && $API $GH1 -q '.active'"
+
 echo
 # The summary carries the RAN count, so a short run cannot be read as success
 # by anything that greps only for failed=0. The exit status is authoritative
@@ -326,7 +348,7 @@ ran=$((pass + fail))
 # directly while the guard read EXPECTED, so updating only EXPECTED left the
 # summary printing a stale denominator. That is the same count-drift this
 # guard exists to catch, introduced by the commit that added the guard.
-EXPECTED=146
+EXPECTED=157
 printf '  passed=%s failed=%s ran=%s/%s\n' "$pass" "$fail" "$ran" "$EXPECTED"
 
 # COMPLETENESS GUARD. A case that never runs is not a case that passed, and
