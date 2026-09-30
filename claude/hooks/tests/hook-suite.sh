@@ -356,6 +356,19 @@ probe "background ampersand separates"       block "$SINKCMD & $API $GH1 -q '$CF
 # refused the call. "deliveries, status codes only" above is that exact shape and
 # is what catches a regression here.
 
+# ⚠️ THE REDIRECT VOCABULARY, pinned as a SET because this rule turns on it and
+# two spellings were wrong for three rounds. `>|` broke when the pipe split
+# arrived, since the noclobber override contains a pipe; `&>` was never accepted
+# at all, while rule 5 in this same file accepts `ps -E &>/dev/null` above. One
+# operator, two verdicts in one hook, and the refused spelling sends MORE to the
+# file, not less. A bare `2>` must stay refused: stdout keeps printing.
+probe "redirect: explicit 1>"                allow "$API $GH1 -q '$CFG' 1> /tmp/u"
+probe "redirect: noclobber override"         allow "$API $GH1 -q '$CFG' >| /tmp/u"
+probe "redirect: and-redirect both fds"      allow "$API $GH1 -q '$CFG' &> /tmp/u"
+probe "redirect: no space before the path"   allow "$API $GH1 -q '$CFG' &>/tmp/u"
+probe "redirect: stdout to file, stderr dup" allow "$API $GH1 -q '$CFG' > /tmp/u 2>&1"
+probe "redirect: 2>&1 alone is not a sink"   block "$API $GH1 -q '$CFG' 2>&1"
+
 echo
 # The summary carries the RAN count, so a short run cannot be read as success
 # by anything that greps only for failed=0. The exit status is authoritative
@@ -365,7 +378,7 @@ ran=$((pass + fail))
 # directly while the guard read EXPECTED, so updating only EXPECTED left the
 # summary printing a stale denominator. That is the same count-drift this
 # guard exists to catch, introduced by the commit that added the guard.
-EXPECTED=163
+EXPECTED=169
 printf '  passed=%s failed=%s ran=%s/%s\n' "$pass" "$fail" "$ran" "$EXPECTED"
 
 # COMPLETENESS GUARD. A case that never runs is not a case that passed, and

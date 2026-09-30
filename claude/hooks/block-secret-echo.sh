@@ -230,7 +230,14 @@ for st in re.split(r";|&&|\|\||&(?!>)|\n", ti.get("command") or ""):  # RAW cmd;
 #     <gh call> | cat | shasum -a 256     digest downstream, still allowed
 # Direction is the whole point: a digest before the call cannot consume its output.
 GH_STMT  = re.compile(r";|&&|\|\||(?<!\|)&(?!>)|\n")
-GH_REDIR = re.compile(r"(?:^|\s)1?>[^&]")
+# The REDIRECT VOCABULARY, and it is deliberately a set rather than one spelling.
+# Accepted: > , 1> , >> , >| (noclobber override) and &> (both fds), plus
+# > f 2>&1 . Refused: a bare 2> , which leaves stdout printing. &> was refused for
+# three rounds while rule 5 in this same file accepted ps -E &>/dev/null : one
+# operator, two verdicts in one hook, and the refused one sends MORE to the file,
+# not less. The suite now pins every spelling, since this rule turns on exactly
+# this vocabulary.
+GH_REDIR = re.compile(r"(?:^|\s)(?:1|&)?>[^&]")
 GH_DIGEST = re.compile(r"shasum|sha256sum|\bmd5\b|wc -c|wc -m")
 GH_HOOKS = re.compile(r"(?:repos|repositories)/[^ \x22\x27]*/hooks|orgs/[^ \x22\x27]*/hooks")
 GH_CFG   = re.compile(r"\.config(?:\.(?:url|secret))?(?:[^A-Za-z0-9_.]|$)")
@@ -253,6 +260,8 @@ def pipe_split(st):
         if ch in "\x27\x22":
             q = ch; cur.append(ch); i += 1; continue
         if ch == "|":
+            if cur and cur[-1] == ">":                  # >| is the noclobber override,
+                cur.append(ch); i += 1; continue        # a REDIRECT, not a pipe
             j = i + 1
             if j < len(st) and st[j] == "&": j += 1     # pipe-ampersand is one pipe
             out.append("".join(cur)); cur = []; i = j; continue
