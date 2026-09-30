@@ -257,6 +257,171 @@ probe "git log with a format"          allow "git log --format=%h"
 probe "prose naming a variable"        allow "echo 'set your API_TOKEN in the UI'"
 probe "a plain build command"          allow "make test"
 
+# ---------------------------------------------------------------- rule 7: credentials returned by an API
+# Fragments, never adjacent in this source, so the suite matches nothing itself.
+CFG='.con''fig.url'
+SEC='.con''fig.secret'
+API='gh a''pi'
+CU='con''fig[url]'
+GH1="repos/O/R/ho""oks/1"
+COBJ=".con""fig"
+CCT=".con""fig.content_type"
+CSSL=".con""fig.insecure_ssl"
+
+probe "config url bare"                block "$API $GH1 -q '$CFG'"
+probe "config secret bare"             block "$API $GH1 -q '$SEC'"
+probe "config url redirected"          allow "$API $GH1 -q '$CFG' > /tmp/u.txt"
+probe "config url appended"            allow "$API $GH1 -q '$CFG' >> /tmp/u.txt"
+probe "config url to a digest"         allow "$API $GH1 -q '$CFG' | shasum"
+# A redaction that runs and strips only part of the value is still a disclosure.
+probe "config url through a redactor"  block "$API $GH1 -q '$CFG' | sed -E 's#x#y#'"
+# Capture is deliberately NOT a sink here, unlike rule 5: a captured value gets
+# printed back in pieces under a name rule 2 cannot see as secret-shaped.
+probe "config url captured"            block "u=${D}($API $GH1 -q '$CFG')"
+probe "stderr-only redirect"           block "$API $GH1 -q '$CFG' 2>/dev/null"
+# No .config named at all: the raw object carries the credential.
+probe "hooks endpoint, no selector"    block "$API $GH1"
+probe "hooks list, no selector"        block "$API repos/O/R/ho""oks"
+probe "hooks endpoint with a selector" allow "$API $GH1 -q '.id, .active'"
+probe "deliveries, status codes only"  allow "$API $GH1/deliveries -q '.[] | .status_code' | sort"
+# ⚠️ A SELECTOR IS NOT A SAFE SELECTOR. Testing only whether -q exists leaves
+# `-q '.'` allowed: two characters from the blocked form, printing the same bytes.
+# The test is whether the selector NAMES A FIELD.
+probe "identity selector"              block "$API $GH1 -q '.'"
+probe "array iterate, no field"        block "$API repos/O/R/ho""oks -q '.[]'"
+probe "array index, no field"          block "$API repos/O/R/ho""oks --jq '.[0]'"
+probe "keys names no field"            block "$API $GH1 -q 'keys'"
+probe "nested field selector"          allow "$API $GH1 -q '.last_response.code'"
+# ⚠️ jq interpolation is backslash-paren, NOT dollar-paren. This fixture used ${D}
+# and so encoded an INVALID jq selector, which the old presence test could not
+# tell from a valid one. Corrected to the form real commands use.
+# ⚠️ jq interpolation is backslash-paren, NOT dollar-paren. This fixture used ${D}
+# and so encoded an INVALID jq selector, which the old presence test could not
+# tell from a valid one. Corrected to the form real commands use.
+probe "interpolated field"             allow "$API $GH1/deliveries -q '.[] | \"\\(.status_code)\"'"
+probe "unquoted selector"              allow "$API $GH1 -q .id"
+probe "selector in = form"             allow "$API $GH1 --jq=.id"
+probe "no selector but redirected"     allow "$API $GH1 > /tmp/h.json"
+probe "no selector but digested"       allow "$API $GH1 | shasum"
+# ⚠️ EVERY SPELLING OF THE SAME RESOURCE: the org endpoint and the numeric
+# repositories/<id> alias reach the same object as repos/<owner>/<repo>.
+probe "orgs hooks endpoint"            block "$API orgs/X/ho""oks/1"
+probe "numeric repositories alias"     block "$API repositories/12345/ho""oks/1"
+probe "orgs hooks with a field"        allow "$API orgs/X/ho""oks/1 -q '.id'"
+# ⚠️ A FIELD BEING PRESENT IS NOT THE SELECTOR EMITTING ONLY FIELDS. All four of
+# these carry a field, so the old presence test passed them, and all four emit the
+# whole object anyway. A blacklist cannot close it: the reconstruction form
+# carries a field and no banned word, which is why the test is an allow-list
+# grammar rather than a list of forbidden tokens.
+probe "trailing identity term"         block "$API $GH1 -q '.id, .'"
+probe "map/del keeps every other key"  block "$API $GH1 -q 'map(del(.id))'"
+probe "recursive descent"              block "$API $GH1 -q '.. | .url? // empty'"
+probe "object reconstruction"          block "$API $GH1 -q '{id: .id, value: .}'"
+
+# 7a precision: only the credential-bearing members of .config are caught.
+# ⚠️ These three MUST come from variables. Written inline as '.con''fig…' inside a
+# double-quoted probe argument the quotes stay literal, the string never becomes
+# the real field name, and all three pass without exercising the rule at all.
+probe "config object blocked"          block "$API $GH1 -q '$COBJ'"
+probe "config content_type allowed"    allow "$API $GH1 -q '$CCT'"
+probe "config insecure_ssl allowed"    allow "$API $GH1 -q '$CSSL'"
+# Rotation. The write RESPONSE echoes the object, so it needs silencing too.
+probe "literal value on a write"       block "$API --method PATCH $GH1 -f $CU=https://example.com/api/webhooks/1/AAAAAAAAAAAAAAAA"
+probe "write from a file, unsilenced"  block "$API --method PATCH $GH1 -f \"$CU=${D}(cat ${D}f)\""
+probe "write from a file, silenced"    allow "$API --method PATCH $GH1 -f \"$CU=${D}(cat ${D}f)\" > /dev/null"
+# An ordinary path containing "hooks" must not be caught.
+probe "git-hooks path not caught"      allow "$API repos/O/R/contents/scripts/git-hooks/operators.txt"
+probe "an unrelated api call"          allow "$API repos/O/R/pulls/416"
+
+# ⚠️ SCOPE: EVERY CASE ABOVE IS A SINGLE COMMAND LINE, AND THAT IS WHY THEY ALL
+# PASSED WHILE THE RULE HAD FOUR FAIL-OPENS AND ONE FAIL-CLOSED. The first version
+# grepped the WHOLE line, so a sink or a -q belonging to ANOTHER command satisfied
+# it. 146/146 was green with all of it present. These pin the scope in both
+# directions: a sink must be in the gh statement to count, and one that is must
+# still work.
+SINKCMD='shasum -a 256 /tmp/other'
+probe "sink from a preceding && command"   block "$SINKCMD && $API $GH1 -q '$CFG'"
+probe "redirect from a preceding command"  block "echo start > /tmp/run.log && $API $GH1 -q '$CFG'"
+probe "sink in a trailing ; command"       block "$API $GH1 -q '$CFG' ; $SINKCMD"
+probe "sink on the far side of ||"         block "$API $GH1 -q '$CFG' || $SINKCMD"
+probe "sink only inside a comment"         block "$API $GH1 -q '$CFG'   # later: $SINKCMD"
+# A pipeline is ONE statement, so a digest downstream of the same call still counts.
+probe "unrelated cmd, then a real sink"    allow "echo hi && $API $GH1 -q '$CFG' > /tmp/u.txt"
+# Comment stripping is quote-aware: these hashes are a sed delimiter, not a comment.
+probe "inline sed hashes are not comments" block "$API $GH1 -q '$CFG' | sed -E 's#x#y#'"
+# The selector must come from the gh statement too, both ways round.
+probe "foreign -q, then identity selector" block "grep -q '.foo' /tmp/f && $API repos/O/R/ho""oks -q '.'"
+probe "foreign -q, then array iterate"     block "grep -q '.foo' /tmp/f && $API repos/O/R/ho""oks --jq '.[]'"
+probe "foreign -q must not over-block"     allow "grep -q needle /tmp/f && $API repos/O/R/ho""oks -q '.id'"
+probe "foreign -q, field on a single hook" allow "grep -q needle /tmp/f && $API $GH1 -q '.active'"
+
+# ⚠️ AND THE STATEMENT WAS STILL TOO COARSE: the sink has to be in the pipeline
+# ELEMENT of the gh call, not merely somewhere in the statement. Judging it per
+# statement left the same scope bug one level down, fail-open both times. Note the
+# DIRECTION: a digest upstream of the call cannot consume its output.
+probe "redirect belongs to an upstream echo" block "echo hi > /tmp/log | $API $GH1 -q '$CFG'"
+probe "digest is upstream of the call"       block "$SINKCMD | $API $GH1 -q '$CFG'"
+probe "upstream digest, nothing downstream"  block "wc -c /tmp/o | $API $GH1 -q '$CFG' | cat"
+probe "digest downstream through cat"        allow "$API $GH1 -q '$CFG' | cat | shasum -a 256"
+# A pipe-ampersand is ONE pipeline, so it must not be read as a statement break.
+probe "pipe-ampersand to a digest"           allow "$API $GH1 -q '$CFG' |& shasum -a 256"
+# ...while a background & between two commands still separates them.
+probe "background ampersand separates"       block "$SINKCMD & $API $GH1 -q '$CFG'"
+# The pipe split is QUOTE-AWARE. A jq selector routinely carries a pipe inside
+# quotes; splitting naively cut it in half, so the field test saw a fragment and
+# refused the call. "deliveries, status codes only" above is that exact shape and
+# is what catches a regression here.
+
+# ⚠️ THE REDIRECT VOCABULARY, pinned as a SET because this rule turns on it and
+# two spellings were wrong for three rounds. `>|` broke when the pipe split
+# arrived, since the noclobber override contains a pipe; `&>` was never accepted
+# at all, while rule 5 in this same file accepts `ps -E &>/dev/null` above. One
+# operator, two verdicts in one hook, and the refused spelling sends MORE to the
+# file, not less. A bare `2>` must stay refused: stdout keeps printing.
+probe "redirect: explicit 1>"                allow "$API $GH1 -q '$CFG' 1> /tmp/u"
+probe "redirect: noclobber override"         allow "$API $GH1 -q '$CFG' >| /tmp/u"
+probe "redirect: and-redirect both fds"      allow "$API $GH1 -q '$CFG' &> /tmp/u"
+probe "redirect: no space before the path"   allow "$API $GH1 -q '$CFG' &>/tmp/u"
+probe "redirect: stdout to file, stderr dup" allow "$API $GH1 -q '$CFG' > /tmp/u 2>&1"
+probe "redirect: 2>&1 alone is not a sink"   block "$API $GH1 -q '$CFG' 2>&1"
+# ⚠️ A REDIRECT IS NOT A SINK UNLESS ITS TARGET IS A FILE, and a DIGEST must be
+# the command rather than a word in someone else's arguments. Scanning raw text
+# for the operator and the name said otherwise eight ways, all measured ALLOW.
+#
+probe "redirect to /dev/stdout"        block "$API $GH1 -q '$CFG' > /dev/stdout"
+probe "redirect to /dev/stderr"        block "$API $GH1 -q '$CFG' > /dev/stderr"
+probe "redirect to /dev/tty"           block "$API $GH1 -q '$CFG' > /dev/tty"
+probe "process substitution target"    block "$API $GH1 -q '$CFG' > >(cat)"
+probe "digest name is only an argument" block "$API $GH1 -q '$CFG' | grep shasum"
+probe "digest name inside xargs args"  block "$API $GH1 -q '$CFG' | xargs -I{} echo shasum"
+probe "tee does not consume"           block "$API $GH1 -q '$CFG' | tee /dev/tty | shasum"
+probe "a > inside a quoted selector"   block "$API $GH1 -q '.id > 5'"
+probe "quoted redirect target works"   allow "$API $GH1 -q '$CFG' > \"/tmp/out file\""
+# ⚠️ 7c HAS TO BE QUOTE-AWARE: inside SINGLE quotes nothing expands, so a literal
+# credential written that way is a literal, not an expansion. All three of these
+# were allowed while the value sat in the command text.
+probe "single-quoted dollar literal"   block "$API --method PATCH $GH1 -f '$CU=\$uperSecret123' > /dev/null"
+probe "single-quoted brace literal"    block "$API --method PATCH $GH1 -f '$CU=\${notavar}' > /dev/null"
+probe "expansion outside single quotes" allow "$API --method PATCH $GH1 -f \"$CU=${D}(cat ${D}f)\" > /dev/null"
+# ⚠️ A DESCRIPTOR IS NOT A FILE, AND THE LAST REDIRECT WINS. Bash applies
+# redirects left to right, so a later one can restore printing that an earlier one
+# removed; and a target beginning with an ampersand duplicates a descriptor rather
+# than naming a file, so it prints. The exception closes the descriptor entirely.
+probe "redirect to stderr by descriptor" block "$API $GH1 -q '$CFG' >&2"
+probe "explicit 1 to stderr descriptor"  block "$API $GH1 -q '$CFG' 1>&2"
+probe "closing the descriptor consumes"  allow "$API $GH1 -q '$CFG' >&-"
+probe "a later redirect restores output" block "$API $GH1 -q '$CFG' > /dev/null > /dev/stdout"
+probe "a later redirect to a real file"  allow "$API $GH1 -q '$CFG' > /dev/stdout > /tmp/u.txt"
+# ⚠️ A DIGEST OPTION CAN REPRODUCE THE INPUT. Measured on macOS: md5 -p prints
+# stdin before the checksum, so the credential is still in the transcript.
+probe "digest option prints its input"   block "$API $GH1 -q '$CFG' | md5 -p"
+probe "algorithm selector still works"   allow "$API $GH1 -q '$CFG' | shasum -a 256"
+# ⚠️ NOT EVERY DOLLAR IS AN EXPANSION: ANSI-C and locale quoting are literal text.
+probe "ANSI-C quoted literal"            block "$API --method PATCH $GH1 -f $CU=${D}'superSecret123' > /dev/null"
+probe "locale-quoted literal"            block "$API --method PATCH $GH1 -f $CU=${D}\"superSecret123\" > /dev/null"
+
+
+
 echo
 # The summary carries the RAN count, so a short run cannot be read as success
 # by anything that greps only for failed=0. The exit status is authoritative
@@ -266,7 +431,7 @@ ran=$((pass + fail))
 # directly while the guard read EXPECTED, so updating only EXPECTED left the
 # summary printing a stale denominator. That is the same count-drift this
 # guard exists to catch, introduced by the commit that added the guard.
-EXPECTED=113
+EXPECTED=194
 printf '  passed=%s failed=%s ran=%s/%s\n' "$pass" "$fail" "$ran" "$EXPECTED"
 
 # COMPLETENESS GUARD. A case that never runs is not a case that passed, and

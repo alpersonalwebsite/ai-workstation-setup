@@ -195,6 +195,240 @@ ps_verdict = "OK"
 for st in re.split(r";|&&|\|\||&(?!>)|\n", ti.get("command") or ""):  # RAW cmd; newline splits; & but not &>
     if stmt_block(st):
         ps_verdict = "BLOCK"; break
+# Rule 7 (a credential returned by an API) is decided HERE, per statement, for the
+# SAME reason rule 6 is, and the first version made exactly the mistake that the
+# rule 6 comment already warns about: it grepped the WHOLE LINE, so any sink token
+# anywhere satisfied it. Measured on the shipped hook, all four printed the
+# credential and all four were allowed:
+#     shasum -a 256 /tmp/other && gh api .../hooks/1 -q .config.url
+#     echo start > /tmp/run.log && <same call>
+#     <same call> ; shasum -a 256 /tmp/other
+#     <same call>   # later: shasum -a 256 x
+# The same whole-line read defeated the names-a-field hardening from the other
+# side. A grep -q earlier in the line was taken as the selector: with a dotted
+# needle it allowed the identity form, and with a plain needle it REFUSED a
+# legitimate .id call. A guard that narrows working input is a regression, so that
+# direction matters as much as the fail-open.
+#
+# Splitting is on STATEMENT separators only, never on a bare pipe: a pipeline is
+# one statement, because a gh call piped to a digest consumes its own output and
+# must stay allowed. Comments are stripped first, quote-aware, so a trailing
+# hash comment cannot donate a sink while an inline sed using hash delimiters
+# keeps them.
+# (No literal single quote anywhere below: this whole program is a single-quoted
+# -c argument, and one apostrophe ends it. That is exactly how this rule broke
+# the hook once already.)
+#
+# ⚠️ AND THE STATEMENT IS STILL TOO COARSE: the sink must belong to the OWN
+# pipeline element of the gh call. Judging it per statement left the same bug one level down,
+# measured and fail-open both times:
+#     echo hi > /tmp/log | <gh call>      the redirect is echo s, not the gh call s
+#     shasum -a 256 /tmp/o | <gh call>    the digest is UPSTREAM, it consumes nothing
+# So the statement is split again on the pipe, the element holding the gh call is
+# located, and consumption means a redirect IN THAT ELEMENT or a digest in any
+# element AFTER it. That keeps the genuine downstream form working:
+#     <gh call> | cat | shasum -a 256     digest downstream, still allowed
+# Direction is the whole point: a digest before the call cannot consume its output.
+# The lookbehind excludes BOTH a preceding pipe (pipe-ampersand is one pipe) and a
+# preceding redirect operator (>& is fd duplication, not a background ampersand).
+# Without the second, >&2 split the pipeline and the target came back empty, so the
+# call blocked for the wrong reason and the parse was wrong wherever it mattered.
+GH_STMT  = re.compile(r";|&&|\|\||(?<![|>])&(?!>)|\n")
+# The REDIRECT VOCABULARY, and it is deliberately a set rather than one spelling.
+# Accepted: > , 1> , >> , >| (noclobber override) and &> (both fds), plus
+# > f 2>&1 . Refused: a bare 2> , which leaves stdout printing. &> was refused for
+# three rounds while rule 5 in this same file accepted ps -E &>/dev/null : one
+# operator, two verdicts in one hook, and the refused one sends MORE to the file,
+# not less. The suite now pins every spelling, since this rule turns on exactly
+# this vocabulary.
+# ⚠️ A REDIRECT IS NOT A SINK UNLESS ITS TARGET IS A FILE, and scanning raw text
+# for the operator said otherwise five ways, all measured as ALLOW:
+#     > /dev/stdout   > /dev/stderr   > /dev/tty   > >(cat)
+# and a > sitting inside a QUOTED jq selector, which is not a redirect at all.
+# The first four re-print the credential; the fifth never redirected anything. So
+# the operator is found OUTSIDE quotes and the decoded target is judged: a
+# /dev/std*, /dev/tty or /dev/fd/* destination and a process substitution are
+# refused, a real path is accepted, and a quoted target such as > "out file" still
+# works because the scan sees the quotes rather than stripping them.
+GH_PRINTY = re.compile(r"^/dev/(std(out|err)|tty|fd/)")
+def gh_stdout_target(el):
+    q = None; i = 0; n = len(el); last = None
+    while i < n:
+        c = el[i]
+        if q:
+            if c == q: q = None
+            i += 1; continue
+        if c in "\x27\x22": q = c; i += 1; continue
+        if c == ">":
+            before = el[i-1] if i else " "
+            if before.isdigit() and before != "1":     # 2> and friends: stderr only
+                i += 1; continue
+            j = i + 1
+            while j < n and el[j] in ">|": j += 1      # >> and the noclobber form
+            while j < n and el[j].isspace(): j += 1
+            k = j
+            while k < n and not el[k].isspace(): k += 1
+            # LAST one wins: bash applies redirects left to right, so
+            # > /tmp/f > /dev/stdout ends up printing. Keep scanning.
+            last = el[j:k]; i = k; continue
+        i += 1
+    return last
+# ⚠️ A DIGEST MUST BE THE COMMAND, NOT A WORD IN ITS ARGUMENTS. Scanning raw text
+# accepted a digest NAME that never ran: grep shasum and xargs echo shasum both
+# read as consumption while the credential printed. And tee does not consume at
+# all: it writes a copy and passes the stream on, so tee to a terminal prints even
+# with a digest further down. Rule 6 in this file already treats tee as a leak for
+# the same reason; rule 7 now agrees with it.
+GH_DIGEST_CMDS = set(["shasum", "sha256sum", "sha1sum", "md5", "md5sum", "cksum"])
+def gh_is_digest(el):
+    # ⚠️ OPTIONS CAN MAKE A DIGEST REPRODUCE ITS INPUT, so the command name is not
+    # enough. Measured on macOS: md5 -p prints stdin BEFORE the checksum, so the
+    # credential is in the transcript and the digest consumed nothing. Only the
+    # algorithm selector is accepted; any other option refuses, which keeps the
+    # common forms (bare, and -a with a number) working and fails closed on
+    # anything unanticipated.
+    toks = el.strip().split()
+    if not toks: return False
+    c = toks[0].split("/")[-1]
+    args = toks[1:]
+    if c == "wc":
+        return bool(args) and all(t.startswith("-") for t in args) \
+               and any(t in ("-c", "-m", "-l") for t in args)
+    if c not in GH_DIGEST_CMDS: return False
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "-a" and i + 1 < len(args) and args[i+1].isdigit(): i += 2; continue
+        if re.match(r"^-a[0-9]+$", a): i += 1; continue
+        return False
+    return True
+def gh_is_tee(el):
+    toks = el.strip().split()
+    return bool(toks) and toks[0].split("/")[-1] == "tee"
+GH_HOOKS = re.compile(r"(?:repos|repositories)/[^ \x22\x27]*/hooks|orgs/[^ \x22\x27]*/hooks")
+GH_CFG   = re.compile(r"\.config(?:\.(?:url|secret))?(?:[^A-Za-z0-9_.]|$)")
+GH_SEL   = re.compile(r"(?:-q|--jq)(?:[\s=]+)(\x27[^\x27]*\x27|\x22[^\x22]*\x22|[^\s]+)")
+GH_FIELD = re.compile(r"\.[A-Za-z_]")
+# ⚠️ A FIELD BEING PRESENT IS NOT THE SAME AS THE SELECTOR EMITTING ONLY FIELDS,
+# and the first version tested the former. Every one of these carries a field, so
+# GH_FIELD passed them, and every one emits the whole object anyway:
+#     .id, .              the trailing identity term
+#     map(del(.id))       everything EXCEPT one key, so the credential survives
+#     .. | .url? // empty recursive descent
+#     {id: .id, value: .} object reconstruction around an identity term
+# A blacklist cannot close this: the reconstruction form carries a field and no
+# banned word. So the test is an ALLOW-LIST GRAMMAR, full-matched: a safe selector
+# is built only from field accesses, array iteration or index, string
+# interpolation of those, commas and pipes. A bare dot, a double dot, a brace, a
+# parenthesis that is not an interpolation, and any bare identifier (map, del,
+# to_entries, keys) all fail to match and are refused. Unanticipated jq syntax
+# therefore fails CLOSED, which is the direction this rule has to err.
+GH_SAFE = re.compile(r"^(?:\s|[,|]|\x22|\\\(|\)|\.\[\]|\.\[[0-9]+\]|\.[A-Za-z_][A-Za-z0-9_]*)+$")
+def gh_sel_safe(raw):
+    s = raw.strip()
+    # Exactly ONE matching outer quote pair, never a character class: stripping the
+    # set would also take the inner closing quote off an interpolated selector and
+    # silently change what is being judged.
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in "\x27\x22":
+        s = s[1:-1]
+    if not GH_FIELD.search(s): return False     # names no field at all
+    return bool(GH_SAFE.match(s))               # and emits nothing but fields
+GH_CALL  = re.compile(r"\bgh\b[^|]*\bapi\b")
+def pipe_split(st):
+    # QUOTE-AWARE, and it has to be: a jq selector routinely carries a pipe INSIDE
+    # quotes, as in -q .[] pipe .status_code . A naive split cut that selector in
+    # half, so the field test saw an unterminated fragment, found no field, and
+    # refused the exact call used to read delivery status codes. Over-blocking a
+    # working command is the failure mode this whole rule keeps being corrected for.
+    out = []; cur = []; q = None; i = 0
+    while i < len(st):
+        ch = st[i]
+        if q:
+            cur.append(ch)
+            if ch == q: q = None
+            i += 1; continue
+        if ch in "\x27\x22":
+            q = ch; cur.append(ch); i += 1; continue
+        if ch == "|":
+            if cur and cur[-1] == ">":                  # >| is the noclobber override,
+                cur.append(ch); i += 1; continue        # a REDIRECT, not a pipe
+            j = i + 1
+            if j < len(st) and st[j] == "&": j += 1     # pipe-ampersand is one pipe
+            out.append("".join(cur)); cur = []; i = j; continue
+        cur.append(ch); i += 1
+    out.append("".join(cur))
+    return out
+def strip_comment(st):
+    q = None
+    for i, ch in enumerate(st):
+        if q:
+            if ch == q: q = None
+            continue
+        if ch in "\x27\x22": q = ch; continue
+        if ch == "#" and (i == 0 or st[i-1].isspace()): return st[:i]
+    return st
+# ⚠️ RULE 7c IS DECIDED HERE TOO, AND IT HAS TO BE QUOTE-AWARE. The bash version
+# asked whether the value STARTS with a dollar or a backtick and called that an
+# expansion. Inside SINGLE quotes none of those expand, so a literal credential
+# written as single-quoted text read as an expansion and was allowed. Measured on
+# three forms, all ALLOW: a dollar-prefixed literal, a brace literal, and a
+# backticked literal, each inside single quotes. The quote state at the value
+# position now decides: inside single quotes nothing expands, so it is a literal.
+GH_LIT = re.compile(r"config\[(?:url|secret)\]=")
+def gh_literal_write(c):
+    for m in GH_LIT.finditer(c):
+        pos = m.end(); q = None; esc = False
+        for ch in c[:pos]:
+            if esc: esc = False; continue
+            if ch == chr(92) and q != chr(39): esc = True; continue
+            if q:
+                if ch == q: q = None
+            elif ch in "\x27\x22": q = ch
+        if q == chr(39): return True              # single-quoted: cannot expand
+        v = c[pos:pos+3]
+        # ⚠️ NOT EVERY DOLLAR IS AN EXPANSION. Bash treats $SINGLEQUOTE...SINGLEQUOTE
+        # as ANSI-C quoting and $DOUBLEQUOTE...DOUBLEQUOTE as locale translation:
+        # both are LITERAL text. Exempting every dollar-prefixed value let a literal
+        # credential through in ANSI-C form. Only a real expansion is exempt.
+        w = v[1:] if v[:1] == chr(34) else v
+        if w[:1] == chr(96): continue                                  # backtick
+        if w[:1] == "$":
+            nx = w[1:2]
+            if nx in ("(", "{") or nx.isalpha() or nx == "_": continue  # $( ${ $NAME
+        return True
+    return False
+gh_literal = "YES" if gh_literal_write(ti.get("command") or "") else "NO"
+gh_verdict = "OK"
+for st in GH_STMT.split(ti.get("command") or ""):
+    st = strip_comment(st)
+    if not GH_CALL.search(st): continue
+    els = pipe_split(st)
+    gi = None
+    for k in range(len(els)):
+        if GH_CALL.search(els[k]): gi = k; break
+    if gi is None: continue
+    # Consumed only by a redirect in the gh element, or a digest DOWNSTREAM of it.
+    _t = gh_stdout_target(els[gi])
+    # A process substitution target may present as >(cmd) or, after the operator
+    # scan, with its own leading >. Reject both: it is a pipe to a command, and
+    # the command can print.
+    # A target starting with & is a DESCRIPTOR, not a file: >&2 sends the
+    # credential to stderr, which prints. The one exception is >&- , which
+    # closes stdout so nothing is written at all.
+    _fd = bool(_t) and _t[:1] == "&" and _t != "&-"   # _t is None when there is no redirect
+    if _t and not GH_PRINTY.match(_t) and not _fd and _t[:1] not in ("(", ">"): continue
+    _dig = False
+    for e in els[gi+1:]:
+        if gh_is_tee(e): break          # tee passes the stream on, it does not consume
+        if gh_is_digest(e): _dig = True; break
+    if _dig: continue
+    tail = "|".join(els[gi:])                # the gh element and everything after
+    if GH_CFG.search(tail):                  # a downstream jq selecting it counts too
+        gh_verdict = "CONFIG"; break
+    if GH_HOOKS.search(els[gi]):             # the path is in the gh element
+        m = GH_SEL.search(els[gi])           # and so is its selector
+        if not gh_sel_safe(m.group(1) if m else ""):
+            gh_verdict = "HOOKS"; break
 # Rules 2b, 3 and 4 also turn on "command position", and used to re-derive it in
 # three separate grep regexes that each got it subtly wrong: a mid-path component
 # counted as the verb (so /usr/local/opt/node/.env, `ls ./env`, `cd /a/b/env`,
@@ -264,6 +498,8 @@ print(envdump_v)
 print(envfile_v)
 print(printname_v)
 print(profile_v)
+print(gh_verdict)
+print(gh_literal)
 print("END")' "$SECRET_RE" 2>/dev/null)
 
 # FAIL CLOSED. Measured before this existed: with the shell utilities present and
@@ -298,6 +534,10 @@ rest=${rest#*$'\n'}
 printname_verdict=${rest%%$'\n'*}
 rest=${rest#*$'\n'}
 profile_verdict=${rest%%$'\n'*}
+rest=${rest#*$'\n'}
+gh_verdict=${rest%%$'\n'*}
+rest=${rest#*$'\n'}
+gh_literal=${rest%%$'\n'*}
 
 # Reading a profile or env file wholesale displays every value in it. Applies
 # to Read/NotebookEdit style tools, which carry file_path rather than command.
@@ -439,4 +679,59 @@ fi
 [ "${ps_verdict:-}" = "BLOCK" ] && \
   deny 'ps with an environment flag can print process environments; pipe to a count/digest, redirect to /dev/null, or use pgrep / ps -A -o pid,command'
 
+# 7. A credential that arrives as command OUTPUT rather than from a local store.
+#    Rules 1-6 all read the command TEXT; this covers the case where the command
+#    is entirely innocent and the secret comes back in the response. A config API
+#    that returns a webhook URL is the common instance: the credential is often in
+#    the URL PATH, so anything that prints it discloses it.
+#
+#    Same "must be consumed" contract as rule 5, with a STRICTER sink list, and
+#    the difference is the point. Capture is NOT a sink: assigning the value puts
+#    it under a variable name rule 2 cannot recognise as secret-shaped, and
+#    printing parts of that variable then discloses it a piece at a time. Requiring
+#    a file or a digest forces the value out of the shell's variable space. A bare
+#    `2>` is not a sink either, since it leaves stdout printing, so the stdout form
+#    is matched specifically.
+#
+#    The rule never reasons about the SHAPE of the value or where a credential sits
+#    inside it. Two real disclosures came from redactions that did exactly that and
+#    looked like they worked: one stripped only a URL's query string while the token
+#    was in its path, and one redacted the field correctly and then printed the
+#    URL's host and path separately from a variable holding it.
+# 7a and 7b are DECIDED IN THE PARSE PASS ABOVE, per statement, for the same
+# reason rule 6 is, and the reasoning lives there beside the code. This is only
+# the verdict.
+#
+# ⚠️ THE FIRST VERSION DECIDED THEM HERE, WITH grep AGAINST THE WHOLE LINE, and
+# that was wrong in both directions. Any sink token anywhere on the line satisfied
+# the check, so `shasum -a 256 /tmp/other && gh api …/hooks/1 -q .config.url`
+# printed the credential and was ALLOWED, as were a preceding redirect, a trailing
+# `; shasum …`, and a trailing comment mentioning one. The same whole-line read
+# also took a `-q` belonging to an earlier command as the selector, which both
+# defeated the names-a-field test and REFUSED a legitimate `-q .id` that followed
+# a `grep -q needle`. Four fail-opens and one fail-closed from one scope error.
+#
+# ⚠️ AND THE SUITE DID NOT CATCH ANY OF IT: all 16 rule 7 cases were single
+# command lines, so none exercised the scope the bug turned on. Multi-statement
+# cases are now pinned in both directions.
+case "${gh_verdict:-OK}" in
+  CONFIG)
+    # shellcheck disable=SC2016  # the $(...) is advice text shown to the user, not an expansion
+    deny 'a gh api call selecting .config would print a credential; redirect it to a file (> file) or pipe it to a digest IN THE SAME STATEMENT. NOT a capture: $(...) is not a sink here' ;;
+  HOOKS)
+    deny 'a gh api call on a hooks endpoint prints the stored credential unless the selector names a field; use -q with a field (.id, .active), or redirect/digest in the same statement' ;;
+esac
+
+# 7c. WRITING a credential as a literal discloses it in the COMMAND TEXT, which is
+#     recorded even when nothing is printed. This is the rotation path, so it is the
+#     one most likely to be typed by hand. Allow it only from a real expansion.
+#     The verdict is computed in the parse pass above, QUOTE-AWARE: asking only
+#     whether the value starts with a dollar or a backtick is wrong, because inside
+#     single quotes none of those expand, so a single-quoted literal read as an
+#     expansion and was allowed.
+#     KNOWN COST: this also fires on prose that quotes the pattern, because the hook
+#     sees only command text and cannot tell documentation from a command. Author
+#     such text with an editor tool rather than a shell heredoc.
+[ "${gh_literal:-NO}" = "YES" ] && \
+  deny 'a webhook url or secret written as a literal appears in the command text; pass it from a file AND silence the response, since the write echoes the updated object and 7b refuses the call without a redirect'
 exit 0
