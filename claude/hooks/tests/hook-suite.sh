@@ -292,7 +292,13 @@ probe "array iterate, no field"        block "$API repos/O/R/ho""oks -q '.[]'"
 probe "array index, no field"          block "$API repos/O/R/ho""oks --jq '.[0]'"
 probe "keys names no field"            block "$API $GH1 -q 'keys'"
 probe "nested field selector"          allow "$API $GH1 -q '.last_response.code'"
-probe "interpolated field"             allow "$API $GH1/deliveries -q '.[] | \"${D}(.status_code)\"'"
+# ⚠️ jq interpolation is backslash-paren, NOT dollar-paren. This fixture used ${D}
+# and so encoded an INVALID jq selector, which the old presence test could not
+# tell from a valid one. Corrected to the form real commands use.
+# ⚠️ jq interpolation is backslash-paren, NOT dollar-paren. This fixture used ${D}
+# and so encoded an INVALID jq selector, which the old presence test could not
+# tell from a valid one. Corrected to the form real commands use.
+probe "interpolated field"             allow "$API $GH1/deliveries -q '.[] | \"\\(.status_code)\"'"
 probe "unquoted selector"              allow "$API $GH1 -q .id"
 probe "selector in = form"             allow "$API $GH1 --jq=.id"
 probe "no selector but redirected"     allow "$API $GH1 > /tmp/h.json"
@@ -302,6 +308,16 @@ probe "no selector but digested"       allow "$API $GH1 | shasum"
 probe "orgs hooks endpoint"            block "$API orgs/X/ho""oks/1"
 probe "numeric repositories alias"     block "$API repositories/12345/ho""oks/1"
 probe "orgs hooks with a field"        allow "$API orgs/X/ho""oks/1 -q '.id'"
+# ⚠️ A FIELD BEING PRESENT IS NOT THE SELECTOR EMITTING ONLY FIELDS. All four of
+# these carry a field, so the old presence test passed them, and all four emit the
+# whole object anyway. A blacklist cannot close it: the reconstruction form
+# carries a field and no banned word, which is why the test is an allow-list
+# grammar rather than a list of forbidden tokens. Found by CodeRabbit.
+probe "trailing identity term"         block "$API $GH1 -q '.id, .'"
+probe "map/del keeps every other key"  block "$API $GH1 -q 'map(del(.id))'"
+probe "recursive descent"              block "$API $GH1 -q '.. | .url? // empty'"
+probe "object reconstruction"          block "$API $GH1 -q '{id: .id, value: .}'"
+
 # 7a precision: only the credential-bearing members of .config are caught.
 # ⚠️ These three MUST come from variables. Written inline as '.con''fig…' inside a
 # double-quoted probe argument the quotes stay literal, the string never becomes
@@ -368,6 +384,26 @@ probe "redirect: and-redirect both fds"      allow "$API $GH1 -q '$CFG' &> /tmp/
 probe "redirect: no space before the path"   allow "$API $GH1 -q '$CFG' &>/tmp/u"
 probe "redirect: stdout to file, stderr dup" allow "$API $GH1 -q '$CFG' > /tmp/u 2>&1"
 probe "redirect: 2>&1 alone is not a sink"   block "$API $GH1 -q '$CFG' 2>&1"
+# ⚠️ A REDIRECT IS NOT A SINK UNLESS ITS TARGET IS A FILE, and a DIGEST must be
+# the command rather than a word in someone else's arguments. Scanning raw text
+# for the operator and the name said otherwise eight ways, all measured ALLOW.
+# Found by CodeRabbit on the same PR that added the pipeline-element scoping.
+probe "redirect to /dev/stdout"        block "$API $GH1 -q '$CFG' > /dev/stdout"
+probe "redirect to /dev/stderr"        block "$API $GH1 -q '$CFG' > /dev/stderr"
+probe "redirect to /dev/tty"           block "$API $GH1 -q '$CFG' > /dev/tty"
+probe "process substitution target"    block "$API $GH1 -q '$CFG' > >(cat)"
+probe "digest name is only an argument" block "$API $GH1 -q '$CFG' | grep shasum"
+probe "digest name inside xargs args"  block "$API $GH1 -q '$CFG' | xargs -I{} echo shasum"
+probe "tee does not consume"           block "$API $GH1 -q '$CFG' | tee /dev/tty | shasum"
+probe "a > inside a quoted selector"   block "$API $GH1 -q '.id > 5'"
+probe "quoted redirect target works"   allow "$API $GH1 -q '$CFG' > \"/tmp/out file\""
+# ⚠️ 7c HAS TO BE QUOTE-AWARE: inside SINGLE quotes nothing expands, so a literal
+# credential written that way is a literal, not an expansion. All three of these
+# were allowed while the value sat in the command text.
+probe "single-quoted dollar literal"   block "$API --method PATCH $GH1 -f '$CU=\$uperSecret123' > /dev/null"
+probe "single-quoted brace literal"    block "$API --method PATCH $GH1 -f '$CU=\${notavar}' > /dev/null"
+probe "expansion outside single quotes" allow "$API --method PATCH $GH1 -f \"$CU=${D}(cat ${D}f)\" > /dev/null"
+
 
 echo
 # The summary carries the RAN count, so a short run cannot be read as success
@@ -378,7 +414,7 @@ ran=$((pass + fail))
 # directly while the guard read EXPECTED, so updating only EXPECTED left the
 # summary printing a stale denominator. That is the same count-drift this
 # guard exists to catch, introduced by the commit that added the guard.
-EXPECTED=169
+EXPECTED=185
 printf '  passed=%s failed=%s ran=%s/%s\n' "$pass" "$fail" "$ran" "$EXPECTED"
 
 # COMPLETENESS GUARD. A case that never runs is not a case that passed, and

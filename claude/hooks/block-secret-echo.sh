@@ -237,12 +237,82 @@ GH_STMT  = re.compile(r";|&&|\|\||(?<!\|)&(?!>)|\n")
 # operator, two verdicts in one hook, and the refused one sends MORE to the file,
 # not less. The suite now pins every spelling, since this rule turns on exactly
 # this vocabulary.
-GH_REDIR = re.compile(r"(?:^|\s)(?:1|&)?>[^&]")
-GH_DIGEST = re.compile(r"shasum|sha256sum|\bmd5\b|wc -c|wc -m")
+# ⚠️ A REDIRECT IS NOT A SINK UNLESS ITS TARGET IS A FILE, and scanning raw text
+# for the operator said otherwise five ways, all measured as ALLOW:
+#     > /dev/stdout   > /dev/stderr   > /dev/tty   > >(cat)
+# and a > sitting inside a QUOTED jq selector, which is not a redirect at all.
+# The first four re-print the credential; the fifth never redirected anything. So
+# the operator is found OUTSIDE quotes and the decoded target is judged: a
+# /dev/std*, /dev/tty or /dev/fd/* destination and a process substitution are
+# refused, a real path is accepted, and a quoted target such as > "out file" still
+# works because the scan sees the quotes rather than stripping them.
+GH_PRINTY = re.compile(r"^/dev/(std(out|err)|tty|fd/)")
+def gh_stdout_target(el):
+    q = None; i = 0; n = len(el)
+    while i < n:
+        c = el[i]
+        if q:
+            if c == q: q = None
+            i += 1; continue
+        if c in "\x27\x22": q = c; i += 1; continue
+        if c == ">":
+            before = el[i-1] if i else " "
+            if before.isdigit() and before != "1":     # 2> and friends: stderr only
+                i += 1; continue
+            j = i + 1
+            while j < n and el[j] in ">|": j += 1      # >> and the noclobber form
+            while j < n and el[j].isspace(): j += 1
+            k = j
+            while k < n and not el[k].isspace(): k += 1
+            return el[j:k]
+        i += 1
+    return None
+# ⚠️ A DIGEST MUST BE THE COMMAND, NOT A WORD IN ITS ARGUMENTS. Scanning raw text
+# accepted a digest NAME that never ran: grep shasum and xargs echo shasum both
+# read as consumption while the credential printed. And tee does not consume at
+# all: it writes a copy and passes the stream on, so tee to a terminal prints even
+# with a digest further down. Rule 6 in this file already treats tee as a leak for
+# the same reason; rule 7 now agrees with it.
+GH_DIGEST_CMDS = set(["shasum", "sha256sum", "sha1sum", "md5", "md5sum", "cksum"])
+def gh_is_digest(el):
+    toks = el.strip().split()
+    if not toks: return False
+    c = toks[0].split("/")[-1]
+    if c in GH_DIGEST_CMDS: return True
+    if c == "wc":
+        return any(t in ("-c", "-m", "-l") for t in toks[1:])
+    return False
+def gh_is_tee(el):
+    toks = el.strip().split()
+    return bool(toks) and toks[0].split("/")[-1] == "tee"
 GH_HOOKS = re.compile(r"(?:repos|repositories)/[^ \x22\x27]*/hooks|orgs/[^ \x22\x27]*/hooks")
 GH_CFG   = re.compile(r"\.config(?:\.(?:url|secret))?(?:[^A-Za-z0-9_.]|$)")
 GH_SEL   = re.compile(r"(?:-q|--jq)(?:[\s=]+)(\x27[^\x27]*\x27|\x22[^\x22]*\x22|[^\s]+)")
 GH_FIELD = re.compile(r"\.[A-Za-z_]")
+# ⚠️ A FIELD BEING PRESENT IS NOT THE SAME AS THE SELECTOR EMITTING ONLY FIELDS,
+# and the first version tested the former. Every one of these carries a field, so
+# GH_FIELD passed them, and every one emits the whole object anyway:
+#     .id, .              the trailing identity term
+#     map(del(.id))       everything EXCEPT one key, so the credential survives
+#     .. | .url? // empty recursive descent
+#     {id: .id, value: .} object reconstruction around an identity term
+# A blacklist cannot close this: the reconstruction form carries a field and no
+# banned word. So the test is an ALLOW-LIST GRAMMAR, full-matched: a safe selector
+# is built only from field accesses, array iteration or index, string
+# interpolation of those, commas and pipes. A bare dot, a double dot, a brace, a
+# parenthesis that is not an interpolation, and any bare identifier (map, del,
+# to_entries, keys) all fail to match and are refused. Unanticipated jq syntax
+# therefore fails CLOSED, which is the direction this rule has to err.
+GH_SAFE = re.compile(r"^(?:\s|[,|]|\x22|\\\(|\)|\.\[\]|\.\[[0-9]+\]|\.[A-Za-z_][A-Za-z0-9_]*)+$")
+def gh_sel_safe(raw):
+    s = raw.strip()
+    # Exactly ONE matching outer quote pair, never a character class: stripping the
+    # set would also take the inner closing quote off an interpolated selector and
+    # silently change what is being judged.
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in "\x27\x22":
+        s = s[1:-1]
+    if not GH_FIELD.search(s): return False     # names no field at all
+    return bool(GH_SAFE.match(s))               # and emits nothing but fields
 GH_CALL  = re.compile(r"\bgh\b[^|]*\bapi\b")
 def pipe_split(st):
     # QUOTE-AWARE, and it has to be: a jq selector routinely carries a pipe INSIDE
@@ -277,6 +347,30 @@ def strip_comment(st):
         if ch in "\x27\x22": q = ch; continue
         if ch == "#" and (i == 0 or st[i-1].isspace()): return st[:i]
     return st
+# ⚠️ RULE 7c IS DECIDED HERE TOO, AND IT HAS TO BE QUOTE-AWARE. The bash version
+# asked whether the value STARTS with a dollar or a backtick and called that an
+# expansion. Inside SINGLE quotes none of those expand, so a literal credential
+# written as single-quoted text read as an expansion and was allowed. Measured on
+# three forms, all ALLOW: a dollar-prefixed literal, a brace literal, and a
+# backticked literal, each inside single quotes. The quote state at the value
+# position now decides: inside single quotes nothing expands, so it is a literal.
+GH_LIT = re.compile(r"config\[(?:url|secret)\]=")
+def gh_literal_write(c):
+    for m in GH_LIT.finditer(c):
+        pos = m.end(); q = None; esc = False
+        for ch in c[:pos]:
+            if esc: esc = False; continue
+            if ch == chr(92) and q != chr(39): esc = True; continue
+            if q:
+                if ch == q: q = None
+            elif ch in "\x27\x22": q = ch
+        if q == chr(39): return True              # single-quoted: cannot expand
+        v = c[pos:pos+2]
+        if v[:1] in ("$", chr(96)): continue      # a real expansion
+        if v[:1] == chr(34) and v[1:2] in ("$", chr(96)): continue
+        return True
+    return False
+gh_literal = "YES" if gh_literal_write(ti.get("command") or "") else "NO"
 gh_verdict = "OK"
 for st in GH_STMT.split(ti.get("command") or ""):
     st = strip_comment(st)
@@ -287,14 +381,22 @@ for st in GH_STMT.split(ti.get("command") or ""):
         if GH_CALL.search(els[k]): gi = k; break
     if gi is None: continue
     # Consumed only by a redirect in the gh element, or a digest DOWNSTREAM of it.
-    if GH_REDIR.search(els[gi]): continue
-    if any(GH_DIGEST.search(e) for e in els[gi+1:]): continue
+    _t = gh_stdout_target(els[gi])
+    # A process substitution target may present as >(cmd) or, after the operator
+    # scan, with its own leading >. Reject both: it is a pipe to a command, and
+    # the command can print.
+    if _t and not GH_PRINTY.match(_t) and _t[:1] not in ("(", ">"): continue
+    _dig = False
+    for e in els[gi+1:]:
+        if gh_is_tee(e): break          # tee passes the stream on, it does not consume
+        if gh_is_digest(e): _dig = True; break
+    if _dig: continue
     tail = "|".join(els[gi:])                # the gh element and everything after
     if GH_CFG.search(tail):                  # a downstream jq selecting it counts too
         gh_verdict = "CONFIG"; break
     if GH_HOOKS.search(els[gi]):             # the path is in the gh element
         m = GH_SEL.search(els[gi])           # and so is its selector
-        if not GH_FIELD.search(m.group(1) if m else ""):
+        if not gh_sel_safe(m.group(1) if m else ""):
             gh_verdict = "HOOKS"; break
 # Rules 2b, 3 and 4 also turn on "command position", and used to re-derive it in
 # three separate grep regexes that each got it subtly wrong: a mid-path component
@@ -366,6 +468,7 @@ print(envfile_v)
 print(printname_v)
 print(profile_v)
 print(gh_verdict)
+print(gh_literal)
 print("END")' "$SECRET_RE" 2>/dev/null)
 
 # FAIL CLOSED. Measured before this existed: with the shell utilities present and
@@ -402,6 +505,8 @@ rest=${rest#*$'\n'}
 profile_verdict=${rest%%$'\n'*}
 rest=${rest#*$'\n'}
 gh_verdict=${rest%%$'\n'*}
+rest=${rest#*$'\n'}
+gh_literal=${rest%%$'\n'*}
 
 # Reading a profile or env file wholesale displays every value in it. Applies
 # to Read/NotebookEdit style tools, which carry file_path rather than command.
@@ -588,13 +693,14 @@ esac
 
 # 7c. WRITING a credential as a literal discloses it in the COMMAND TEXT, which is
 #     recorded even when nothing is printed. This is the rotation path, so it is the
-#     one most likely to be typed by hand. Allow it only from an expansion.
+#     one most likely to be typed by hand. Allow it only from a real expansion.
+#     The verdict is computed in the parse pass above, QUOTE-AWARE: asking only
+#     whether the value starts with a dollar or a backtick is wrong, because inside
+#     single quotes none of those expand, so a single-quoted literal read as an
+#     expansion and was allowed.
 #     KNOWN COST: this also fires on prose that quotes the pattern, because the hook
 #     sees only command text and cannot tell documentation from a command. Author
 #     such text with an editor tool rather than a shell heredoc.
-if printf '%s' "$cmd" | grep -qE 'config\[(url|secret)\]='; then
-  printf '%s' "$cmd" | grep -qE 'config\[(url|secret)\]=("?\$\(|"?\$\{|"?\$[A-Za-z_]|`)' \
-    || deny 'a webhook url or secret written as a literal appears in the command text; pass it from a file AND silence the response, since the write echoes the updated object and 7b refuses the call without a redirect'
-fi
-
+[ "${gh_literal:-NO}" = "YES" ] && \
+  deny 'a webhook url or secret written as a literal appears in the command text; pass it from a file AND silence the response, since the write echoes the updated object and 7b refuses the call without a redirect'
 exit 0
