@@ -528,6 +528,7 @@ fi
 # cases are now pinned in both directions.
 case "${gh_verdict:-OK}" in
   CONFIG)
+    # shellcheck disable=SC2016  # the $(...) is advice text shown to the user, not an expansion
     deny 'a gh api call selecting .config would print a credential; redirect it to a file (> file) or pipe it to a digest IN THE SAME STATEMENT. NOT a capture: $(...) is not a sink here' ;;
   HOOKS)
     deny 'a gh api call on a hooks endpoint prints the stored credential unless the selector names a field; use -q with a field (.id, .active), or redirect/digest in the same statement' ;;
