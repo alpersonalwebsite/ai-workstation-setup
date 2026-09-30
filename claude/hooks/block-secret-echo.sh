@@ -218,12 +218,47 @@ for st in re.split(r";|&&|\|\||&(?!>)|\n", ti.get("command") or ""):  # RAW cmd;
 # (No literal single quote anywhere below: this whole program is a single-quoted
 # -c argument, and one apostrophe ends it. That is exactly how this rule broke
 # the hook once already.)
-GH_SINK  = re.compile(r"shasum|sha256sum|\bmd5\b|wc -c|wc -m|(?:^|\s)1?>[^&]")
+#
+# ⚠️ AND THE STATEMENT IS STILL TOO COARSE: the sink must belong to the OWN
+# pipeline element of the gh call. Judging it per statement left the same bug one level down,
+# measured and fail-open both times:
+#     echo hi > /tmp/log | <gh call>      the redirect is echo s, not the gh call s
+#     shasum -a 256 /tmp/o | <gh call>    the digest is UPSTREAM, it consumes nothing
+# So the statement is split again on the pipe, the element holding the gh call is
+# located, and consumption means a redirect IN THAT ELEMENT or a digest in any
+# element AFTER it. That keeps the genuine downstream form working:
+#     <gh call> | cat | shasum -a 256     digest downstream, still allowed
+# Direction is the whole point: a digest before the call cannot consume its output.
+GH_STMT  = re.compile(r";|&&|\|\||(?<!\|)&(?!>)|\n")
+GH_REDIR = re.compile(r"(?:^|\s)1?>[^&]")
+GH_DIGEST = re.compile(r"shasum|sha256sum|\bmd5\b|wc -c|wc -m")
 GH_HOOKS = re.compile(r"(?:repos|repositories)/[^ \x22\x27]*/hooks|orgs/[^ \x22\x27]*/hooks")
 GH_CFG   = re.compile(r"\.config(?:\.(?:url|secret))?(?:[^A-Za-z0-9_.]|$)")
 GH_SEL   = re.compile(r"(?:-q|--jq)(?:[\s=]+)(\x27[^\x27]*\x27|\x22[^\x22]*\x22|[^\s]+)")
 GH_FIELD = re.compile(r"\.[A-Za-z_]")
 GH_CALL  = re.compile(r"\bgh\b[^|]*\bapi\b")
+def pipe_split(st):
+    # QUOTE-AWARE, and it has to be: a jq selector routinely carries a pipe INSIDE
+    # quotes, as in -q .[] pipe .status_code . A naive split cut that selector in
+    # half, so the field test saw an unterminated fragment, found no field, and
+    # refused the exact call used to read delivery status codes. Over-blocking a
+    # working command is the failure mode this whole rule keeps being corrected for.
+    out = []; cur = []; q = None; i = 0
+    while i < len(st):
+        ch = st[i]
+        if q:
+            cur.append(ch)
+            if ch == q: q = None
+            i += 1; continue
+        if ch in "\x27\x22":
+            q = ch; cur.append(ch); i += 1; continue
+        if ch == "|":
+            j = i + 1
+            if j < len(st) and st[j] == "&": j += 1     # pipe-ampersand is one pipe
+            out.append("".join(cur)); cur = []; i = j; continue
+        cur.append(ch); i += 1
+    out.append("".join(cur))
+    return out
 def strip_comment(st):
     q = None
     for i, ch in enumerate(st):
@@ -234,14 +269,22 @@ def strip_comment(st):
         if ch == "#" and (i == 0 or st[i-1].isspace()): return st[:i]
     return st
 gh_verdict = "OK"
-for st in re.split(r";|&&|\|\||&(?!>)|\n", ti.get("command") or ""):
+for st in GH_STMT.split(ti.get("command") or ""):
     st = strip_comment(st)
     if not GH_CALL.search(st): continue
-    if GH_SINK.search(st): continue          # consumed within THIS statement
-    if GH_CFG.search(st):
+    els = pipe_split(st)
+    gi = None
+    for k in range(len(els)):
+        if GH_CALL.search(els[k]): gi = k; break
+    if gi is None: continue
+    # Consumed only by a redirect in the gh element, or a digest DOWNSTREAM of it.
+    if GH_REDIR.search(els[gi]): continue
+    if any(GH_DIGEST.search(e) for e in els[gi+1:]): continue
+    tail = "|".join(els[gi:])                # the gh element and everything after
+    if GH_CFG.search(tail):                  # a downstream jq selecting it counts too
         gh_verdict = "CONFIG"; break
-    if GH_HOOKS.search(st):
-        m = GH_SEL.search(st)                # the selector from THIS statement only
+    if GH_HOOKS.search(els[gi]):             # the path is in the gh element
+        m = GH_SEL.search(els[gi])           # and so is its selector
         if not GH_FIELD.search(m.group(1) if m else ""):
             gh_verdict = "HOOKS"; break
 # Rules 2b, 3 and 4 also turn on "command position", and used to re-derive it in

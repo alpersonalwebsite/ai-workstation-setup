@@ -339,6 +339,23 @@ probe "foreign -q, then array iterate"     block "grep -q '.foo' /tmp/f && $API 
 probe "foreign -q must not over-block"     allow "grep -q needle /tmp/f && $API repos/O/R/ho""oks -q '.id'"
 probe "foreign -q, field on a single hook" allow "grep -q needle /tmp/f && $API $GH1 -q '.active'"
 
+# ⚠️ AND THE STATEMENT WAS STILL TOO COARSE: the sink has to be in the pipeline
+# ELEMENT of the gh call, not merely somewhere in the statement. Judging it per
+# statement left the same scope bug one level down, fail-open both times. Note the
+# DIRECTION: a digest upstream of the call cannot consume its output.
+probe "redirect belongs to an upstream echo" block "echo hi > /tmp/log | $API $GH1 -q '$CFG'"
+probe "digest is upstream of the call"       block "$SINKCMD | $API $GH1 -q '$CFG'"
+probe "upstream digest, nothing downstream"  block "wc -c /tmp/o | $API $GH1 -q '$CFG' | cat"
+probe "digest downstream through cat"        allow "$API $GH1 -q '$CFG' | cat | shasum -a 256"
+# A pipe-ampersand is ONE pipeline, so it must not be read as a statement break.
+probe "pipe-ampersand to a digest"           allow "$API $GH1 -q '$CFG' |& shasum -a 256"
+# ...while a background & between two commands still separates them.
+probe "background ampersand separates"       block "$SINKCMD & $API $GH1 -q '$CFG'"
+# The pipe split is QUOTE-AWARE. A jq selector routinely carries a pipe inside
+# quotes; splitting naively cut it in half, so the field test saw a fragment and
+# refused the call. "deliveries, status codes only" above is that exact shape and
+# is what catches a regression here.
+
 echo
 # The summary carries the RAN count, so a short run cannot be read as success
 # by anything that greps only for failed=0. The exit status is authoritative
@@ -348,7 +365,7 @@ ran=$((pass + fail))
 # directly while the guard read EXPECTED, so updating only EXPECTED left the
 # summary printing a stale denominator. That is the same count-drift this
 # guard exists to catch, introduced by the commit that added the guard.
-EXPECTED=157
+EXPECTED=163
 printf '  passed=%s failed=%s ran=%s/%s\n' "$pass" "$fail" "$ran" "$EXPECTED"
 
 # COMPLETENESS GUARD. A case that never runs is not a case that passed, and
