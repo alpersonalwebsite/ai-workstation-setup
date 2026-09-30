@@ -312,7 +312,7 @@ probe "orgs hooks with a field"        allow "$API orgs/X/ho""oks/1 -q '.id'"
 # these carry a field, so the old presence test passed them, and all four emit the
 # whole object anyway. A blacklist cannot close it: the reconstruction form
 # carries a field and no banned word, which is why the test is an allow-list
-# grammar rather than a list of forbidden tokens. Found by CodeRabbit.
+# grammar rather than a list of forbidden tokens.
 probe "trailing identity term"         block "$API $GH1 -q '.id, .'"
 probe "map/del keeps every other key"  block "$API $GH1 -q 'map(del(.id))'"
 probe "recursive descent"              block "$API $GH1 -q '.. | .url? // empty'"
@@ -387,7 +387,7 @@ probe "redirect: 2>&1 alone is not a sink"   block "$API $GH1 -q '$CFG' 2>&1"
 # ⚠️ A REDIRECT IS NOT A SINK UNLESS ITS TARGET IS A FILE, and a DIGEST must be
 # the command rather than a word in someone else's arguments. Scanning raw text
 # for the operator and the name said otherwise eight ways, all measured ALLOW.
-# Found by CodeRabbit on the same PR that added the pipeline-element scoping.
+#
 probe "redirect to /dev/stdout"        block "$API $GH1 -q '$CFG' > /dev/stdout"
 probe "redirect to /dev/stderr"        block "$API $GH1 -q '$CFG' > /dev/stderr"
 probe "redirect to /dev/tty"           block "$API $GH1 -q '$CFG' > /dev/tty"
@@ -403,6 +403,23 @@ probe "quoted redirect target works"   allow "$API $GH1 -q '$CFG' > \"/tmp/out f
 probe "single-quoted dollar literal"   block "$API --method PATCH $GH1 -f '$CU=\$uperSecret123' > /dev/null"
 probe "single-quoted brace literal"    block "$API --method PATCH $GH1 -f '$CU=\${notavar}' > /dev/null"
 probe "expansion outside single quotes" allow "$API --method PATCH $GH1 -f \"$CU=${D}(cat ${D}f)\" > /dev/null"
+# ⚠️ A DESCRIPTOR IS NOT A FILE, AND THE LAST REDIRECT WINS. Bash applies
+# redirects left to right, so a later one can restore printing that an earlier one
+# removed; and a target beginning with an ampersand duplicates a descriptor rather
+# than naming a file, so it prints. The exception closes the descriptor entirely.
+probe "redirect to stderr by descriptor" block "$API $GH1 -q '$CFG' >&2"
+probe "explicit 1 to stderr descriptor"  block "$API $GH1 -q '$CFG' 1>&2"
+probe "closing the descriptor consumes"  allow "$API $GH1 -q '$CFG' >&-"
+probe "a later redirect restores output" block "$API $GH1 -q '$CFG' > /dev/null > /dev/stdout"
+probe "a later redirect to a real file"  allow "$API $GH1 -q '$CFG' > /dev/stdout > /tmp/u.txt"
+# ⚠️ A DIGEST OPTION CAN REPRODUCE THE INPUT. Measured on macOS: md5 -p prints
+# stdin before the checksum, so the credential is still in the transcript.
+probe "digest option prints its input"   block "$API $GH1 -q '$CFG' | md5 -p"
+probe "algorithm selector still works"   allow "$API $GH1 -q '$CFG' | shasum -a 256"
+# ⚠️ NOT EVERY DOLLAR IS AN EXPANSION: ANSI-C and locale quoting are literal text.
+probe "ANSI-C quoted literal"            block "$API --method PATCH $GH1 -f $CU=${D}'superSecret123' > /dev/null"
+probe "locale-quoted literal"            block "$API --method PATCH $GH1 -f $CU=${D}\"superSecret123\" > /dev/null"
+
 
 
 echo
@@ -414,7 +431,7 @@ ran=$((pass + fail))
 # directly while the guard read EXPECTED, so updating only EXPECTED left the
 # summary printing a stale denominator. That is the same count-drift this
 # guard exists to catch, introduced by the commit that added the guard.
-EXPECTED=185
+EXPECTED=194
 printf '  passed=%s failed=%s ran=%s/%s\n' "$pass" "$fail" "$ran" "$EXPECTED"
 
 # COMPLETENESS GUARD. A case that never runs is not a case that passed, and

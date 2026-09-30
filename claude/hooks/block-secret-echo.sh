@@ -229,7 +229,11 @@ for st in re.split(r";|&&|\|\||&(?!>)|\n", ti.get("command") or ""):  # RAW cmd;
 # element AFTER it. That keeps the genuine downstream form working:
 #     <gh call> | cat | shasum -a 256     digest downstream, still allowed
 # Direction is the whole point: a digest before the call cannot consume its output.
-GH_STMT  = re.compile(r";|&&|\|\||(?<!\|)&(?!>)|\n")
+# The lookbehind excludes BOTH a preceding pipe (pipe-ampersand is one pipe) and a
+# preceding redirect operator (>& is fd duplication, not a background ampersand).
+# Without the second, >&2 split the pipeline and the target came back empty, so the
+# call blocked for the wrong reason and the parse was wrong wherever it mattered.
+GH_STMT  = re.compile(r";|&&|\|\||(?<![|>])&(?!>)|\n")
 # The REDIRECT VOCABULARY, and it is deliberately a set rather than one spelling.
 # Accepted: > , 1> , >> , >| (noclobber override) and &> (both fds), plus
 # > f 2>&1 . Refused: a bare 2> , which leaves stdout printing. &> was refused for
@@ -248,7 +252,7 @@ GH_STMT  = re.compile(r";|&&|\|\||(?<!\|)&(?!>)|\n")
 # works because the scan sees the quotes rather than stripping them.
 GH_PRINTY = re.compile(r"^/dev/(std(out|err)|tty|fd/)")
 def gh_stdout_target(el):
-    q = None; i = 0; n = len(el)
+    q = None; i = 0; n = len(el); last = None
     while i < n:
         c = el[i]
         if q:
@@ -264,9 +268,11 @@ def gh_stdout_target(el):
             while j < n and el[j].isspace(): j += 1
             k = j
             while k < n and not el[k].isspace(): k += 1
-            return el[j:k]
+            # LAST one wins: bash applies redirects left to right, so
+            # > /tmp/f > /dev/stdout ends up printing. Keep scanning.
+            last = el[j:k]; i = k; continue
         i += 1
-    return None
+    return last
 # ⚠️ A DIGEST MUST BE THE COMMAND, NOT A WORD IN ITS ARGUMENTS. Scanning raw text
 # accepted a digest NAME that never ran: grep shasum and xargs echo shasum both
 # read as consumption while the credential printed. And tee does not consume at
@@ -275,13 +281,27 @@ def gh_stdout_target(el):
 # the same reason; rule 7 now agrees with it.
 GH_DIGEST_CMDS = set(["shasum", "sha256sum", "sha1sum", "md5", "md5sum", "cksum"])
 def gh_is_digest(el):
+    # ⚠️ OPTIONS CAN MAKE A DIGEST REPRODUCE ITS INPUT, so the command name is not
+    # enough. Measured on macOS: md5 -p prints stdin BEFORE the checksum, so the
+    # credential is in the transcript and the digest consumed nothing. Only the
+    # algorithm selector is accepted; any other option refuses, which keeps the
+    # common forms (bare, and -a with a number) working and fails closed on
+    # anything unanticipated.
     toks = el.strip().split()
     if not toks: return False
     c = toks[0].split("/")[-1]
-    if c in GH_DIGEST_CMDS: return True
+    args = toks[1:]
     if c == "wc":
-        return any(t in ("-c", "-m", "-l") for t in toks[1:])
-    return False
+        return bool(args) and all(t.startswith("-") for t in args) \
+               and any(t in ("-c", "-m", "-l") for t in args)
+    if c not in GH_DIGEST_CMDS: return False
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "-a" and i + 1 < len(args) and args[i+1].isdigit(): i += 2; continue
+        if re.match(r"^-a[0-9]+$", a): i += 1; continue
+        return False
+    return True
 def gh_is_tee(el):
     toks = el.strip().split()
     return bool(toks) and toks[0].split("/")[-1] == "tee"
@@ -365,9 +385,16 @@ def gh_literal_write(c):
                 if ch == q: q = None
             elif ch in "\x27\x22": q = ch
         if q == chr(39): return True              # single-quoted: cannot expand
-        v = c[pos:pos+2]
-        if v[:1] in ("$", chr(96)): continue      # a real expansion
-        if v[:1] == chr(34) and v[1:2] in ("$", chr(96)): continue
+        v = c[pos:pos+3]
+        # ⚠️ NOT EVERY DOLLAR IS AN EXPANSION. Bash treats $SINGLEQUOTE...SINGLEQUOTE
+        # as ANSI-C quoting and $DOUBLEQUOTE...DOUBLEQUOTE as locale translation:
+        # both are LITERAL text. Exempting every dollar-prefixed value let a literal
+        # credential through in ANSI-C form. Only a real expansion is exempt.
+        w = v[1:] if v[:1] == chr(34) else v
+        if w[:1] == chr(96): continue                                  # backtick
+        if w[:1] == "$":
+            nx = w[1:2]
+            if nx in ("(", "{") or nx.isalpha() or nx == "_": continue  # $( ${ $NAME
         return True
     return False
 gh_literal = "YES" if gh_literal_write(ti.get("command") or "") else "NO"
@@ -385,7 +412,11 @@ for st in GH_STMT.split(ti.get("command") or ""):
     # A process substitution target may present as >(cmd) or, after the operator
     # scan, with its own leading >. Reject both: it is a pipe to a command, and
     # the command can print.
-    if _t and not GH_PRINTY.match(_t) and _t[:1] not in ("(", ">"): continue
+    # A target starting with & is a DESCRIPTOR, not a file: >&2 sends the
+    # credential to stderr, which prints. The one exception is >&- , which
+    # closes stdout so nothing is written at all.
+    _fd = bool(_t) and _t[:1] == "&" and _t != "&-"   # _t is None when there is no redirect
+    if _t and not GH_PRINTY.match(_t) and not _fd and _t[:1] not in ("(", ">"): continue
     _dig = False
     for e in els[gi+1:]:
         if gh_is_tee(e): break          # tee passes the stream on, it does not consume
