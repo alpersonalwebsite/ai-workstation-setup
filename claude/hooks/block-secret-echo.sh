@@ -466,13 +466,30 @@ if printf '%s' "$cmd" | grep -qE '\bgh\b[^|]*\bapi\b'; then
     printf '%s' "$cmd" | grep -qE "$_GH_SINK" \
       || deny 'a gh api call selecting .config would print a credential; redirect it to a file (> file) or pipe it to a digest'
   fi
-  # 7b. A hooks endpoint with NO jq selector returns the whole object, so the
-  #     credential prints without .config ever being named. Anchored on the repos
-  #     hooks endpoint so an ordinary path containing "hooks" is not caught.
-  if printf '%s' "$cmd" | grep -qE "repos/[^ \"']*/hooks" \
-     && ! printf '%s' "$cmd" | grep -qE '(^|[[:space:]])(-q|--jq)([[:space:]]|=)'; then
-    printf '%s' "$cmd" | grep -qE "$_GH_SINK" \
-      || deny 'a gh api call on a hooks endpoint with no --jq selector prints the stored credential; add a selector, redirect to a file, or pipe to a digest'
+  # 7b. A hooks endpoint that prints the whole object discloses the credential
+  #     without .config ever being named.
+  #
+  #     ⚠️ THE TEST IS "NAMES A FIELD", NOT "HAS A SELECTOR". Testing merely for
+  #     the PRESENCE of -q/--jq leaves `-q '.'` allowed, which is two characters
+  #     from the blocked form and prints the same bytes; `-q '.[]'` and `-q '.[0]'`
+  #     likewise. So the selector must reference at least one FIELD (a dot followed
+  #     by an identifier). `.`, `.[]` and `.[0]` name none and are refused;
+  #     `.id, .active` and `.[] | .status_code` pass. Conservative by construction:
+  #     a selector this cannot read as field-naming is refused, not allowed.
+  #
+  #     ⚠️ THE ANCHOR COVERS EVERY SPELLING OF THE SAME RESOURCE. Matching only
+  #     `repos/` misses `orgs/<org>/hooks` and the numeric `repositories/<id>/hooks`
+  #     alias, both of which reach a webhook object with the same stored credential.
+  #     The org endpoint matters for anyone whose repositories live under one.
+  #     Widening costs nothing against the false-positive case, since a path such as
+  #     scripts/git-hooks/... still has no "/hooks" path segment.
+  if printf '%s' "$cmd" | grep -qE "(repos|repositories)/[^ \"']*/hooks|orgs/[^ \"']*/hooks"; then
+    if ! printf '%s' "$cmd" | grep -qE "$_GH_SINK"; then
+      _sel=$(printf '%s' "$cmd" \
+             | grep -oE "(-q|--jq)([[:space:]]|=)+('[^']*'|\"[^\"]*\"|[^[:space:]]+)" | head -1)
+      printf '%s' "$_sel" | grep -qE '\.[A-Za-z_]' \
+        || deny 'a gh api call on a hooks endpoint prints the stored credential unless the selector names a field; use -q with a field (.id, .active), redirect to a file, or pipe to a digest'
+    fi
   fi
 fi
 

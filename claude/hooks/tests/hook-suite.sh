@@ -264,6 +264,9 @@ SEC='.con''fig.secret'
 API='gh a''pi'
 CU='con''fig[url]'
 GH1="repos/O/R/ho""oks/1"
+COBJ=".con""fig"
+CCT=".con""fig.content_type"
+CSSL=".con""fig.insecure_ssl"
 
 probe "config url bare"                block "$API $GH1 -q '$CFG'"
 probe "config secret bare"             block "$API $GH1 -q '$SEC'"
@@ -281,6 +284,31 @@ probe "hooks endpoint, no selector"    block "$API $GH1"
 probe "hooks list, no selector"        block "$API repos/O/R/ho""oks"
 probe "hooks endpoint with a selector" allow "$API $GH1 -q '.id, .active'"
 probe "deliveries, status codes only"  allow "$API $GH1/deliveries -q '.[] | .status_code' | sort"
+# ⚠️ A SELECTOR IS NOT A SAFE SELECTOR. Testing only whether -q exists leaves
+# `-q '.'` allowed: two characters from the blocked form, printing the same bytes.
+# The test is whether the selector NAMES A FIELD.
+probe "identity selector"              block "$API $GH1 -q '.'"
+probe "array iterate, no field"        block "$API repos/O/R/ho""oks -q '.[]'"
+probe "array index, no field"          block "$API repos/O/R/ho""oks --jq '.[0]'"
+probe "keys names no field"            block "$API $GH1 -q 'keys'"
+probe "nested field selector"          allow "$API $GH1 -q '.last_response.code'"
+probe "interpolated field"             allow "$API $GH1/deliveries -q '.[] | \"${D}(.status_code)\"'"
+probe "unquoted selector"              allow "$API $GH1 -q .id"
+probe "selector in = form"             allow "$API $GH1 --jq=.id"
+probe "no selector but redirected"     allow "$API $GH1 > /tmp/h.json"
+probe "no selector but digested"       allow "$API $GH1 | shasum"
+# ⚠️ EVERY SPELLING OF THE SAME RESOURCE: the org endpoint and the numeric
+# repositories/<id> alias reach the same object as repos/<owner>/<repo>.
+probe "orgs hooks endpoint"            block "$API orgs/X/ho""oks/1"
+probe "numeric repositories alias"     block "$API repositories/12345/ho""oks/1"
+probe "orgs hooks with a field"        allow "$API orgs/X/ho""oks/1 -q '.id'"
+# 7a precision: only the credential-bearing members of .config are caught.
+# ⚠️ These three MUST come from variables. Written inline as '.con''fig…' inside a
+# double-quoted probe argument the quotes stay literal, the string never becomes
+# the real field name, and all three pass without exercising the rule at all.
+probe "config object blocked"          block "$API $GH1 -q '$COBJ'"
+probe "config content_type allowed"    allow "$API $GH1 -q '$CCT'"
+probe "config insecure_ssl allowed"    allow "$API $GH1 -q '$CSSL'"
 # Rotation. The write RESPONSE echoes the object, so it needs silencing too.
 probe "literal value on a write"       block "$API --method PATCH $GH1 -f $CU=https://example.com/api/webhooks/1/AAAAAAAAAAAAAAAA"
 probe "write from a file, unsilenced"  block "$API --method PATCH $GH1 -f \"$CU=${D}(cat ${D}f)\""
@@ -298,7 +326,7 @@ ran=$((pass + fail))
 # directly while the guard read EXPECTED, so updating only EXPECTED left the
 # summary printing a stale denominator. That is the same count-drift this
 # guard exists to catch, introduced by the commit that added the guard.
-EXPECTED=130
+EXPECTED=146
 printf '  passed=%s failed=%s ran=%s/%s\n' "$pass" "$fail" "$ran" "$EXPECTED"
 
 # COMPLETENESS GUARD. A case that never runs is not a case that passed, and
