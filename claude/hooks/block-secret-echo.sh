@@ -439,4 +439,52 @@ fi
 [ "${ps_verdict:-}" = "BLOCK" ] && \
   deny 'ps with an environment flag can print process environments; pipe to a count/digest, redirect to /dev/null, or use pgrep / ps -A -o pid,command'
 
+# 7. A credential that arrives as command OUTPUT rather than from a local store.
+#    Rules 1-6 all read the command TEXT; this covers the case where the command
+#    is entirely innocent and the secret comes back in the response. A config API
+#    that returns a webhook URL is the common instance: the credential is often in
+#    the URL PATH, so anything that prints it discloses it.
+#
+#    Same "must be consumed" contract as rule 5, with a STRICTER sink list, and
+#    the difference is the point. Capture is NOT a sink: assigning the value puts
+#    it under a variable name rule 2 cannot recognise as secret-shaped, and
+#    printing parts of that variable then discloses it a piece at a time. Requiring
+#    a file or a digest forces the value out of the shell's variable space. A bare
+#    `2>` is not a sink either, since it leaves stdout printing, so the stdout form
+#    is matched specifically.
+#
+#    The rule never reasons about the SHAPE of the value or where a credential sits
+#    inside it. Two real disclosures came from redactions that did exactly that and
+#    looked like they worked: one stripped only a URL's query string while the token
+#    was in its path, and one redacted the field correctly and then printed the
+#    URL's host and path separately from a variable holding it.
+_GH_SINK='(shasum|sha256sum|md5|wc -c|wc -m|(^|[[:space:]])1?>[^&])'
+if printf '%s' "$cmd" | grep -qE '\bgh\b[^|]*\bapi\b'; then
+  # 7a. An explicit reach into .config: the url, the secret, or the whole object,
+  #     which carries the url inside it.
+  if printf '%s' "$cmd" | grep -qE '\.config(\.(url|secret))?([^A-Za-z0-9_.]|$)'; then
+    printf '%s' "$cmd" | grep -qE "$_GH_SINK" \
+      || deny 'a gh api call selecting .config would print a credential; redirect it to a file (> file) or pipe it to a digest'
+  fi
+  # 7b. A hooks endpoint with NO jq selector returns the whole object, so the
+  #     credential prints without .config ever being named. Anchored on the repos
+  #     hooks endpoint so an ordinary path containing "hooks" is not caught.
+  if printf '%s' "$cmd" | grep -qE "repos/[^ \"']*/hooks" \
+     && ! printf '%s' "$cmd" | grep -qE '(^|[[:space:]])(-q|--jq)([[:space:]]|=)'; then
+    printf '%s' "$cmd" | grep -qE "$_GH_SINK" \
+      || deny 'a gh api call on a hooks endpoint with no --jq selector prints the stored credential; add a selector, redirect to a file, or pipe to a digest'
+  fi
+fi
+
+# 7c. WRITING a credential as a literal discloses it in the COMMAND TEXT, which is
+#     recorded even when nothing is printed. This is the rotation path, so it is the
+#     one most likely to be typed by hand. Allow it only from an expansion.
+#     KNOWN COST: this also fires on prose that quotes the pattern, because the hook
+#     sees only command text and cannot tell documentation from a command. Author
+#     such text with an editor tool rather than a shell heredoc.
+if printf '%s' "$cmd" | grep -qE 'config\[(url|secret)\]='; then
+  printf '%s' "$cmd" | grep -qE 'config\[(url|secret)\]=("?\$\(|"?\$\{|"?\$[A-Za-z_]|`)' \
+    || deny 'a webhook url or secret written as a literal appears in the command text; pass it from a file instead'
+fi
+
 exit 0

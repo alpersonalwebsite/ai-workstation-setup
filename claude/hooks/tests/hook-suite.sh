@@ -257,6 +257,38 @@ probe "git log with a format"          allow "git log --format=%h"
 probe "prose naming a variable"        allow "echo 'set your API_TOKEN in the UI'"
 probe "a plain build command"          allow "make test"
 
+# ---------------------------------------------------------------- rule 7: credentials returned by an API
+# Fragments, never adjacent in this source, so the suite matches nothing itself.
+CFG='.con''fig.url'
+SEC='.con''fig.secret'
+API='gh a''pi'
+CU='con''fig[url]'
+GH1="repos/O/R/ho""oks/1"
+
+probe "config url bare"                block "$API $GH1 -q '$CFG'"
+probe "config secret bare"             block "$API $GH1 -q '$SEC'"
+probe "config url redirected"          allow "$API $GH1 -q '$CFG' > /tmp/u.txt"
+probe "config url appended"            allow "$API $GH1 -q '$CFG' >> /tmp/u.txt"
+probe "config url to a digest"         allow "$API $GH1 -q '$CFG' | shasum"
+# A redaction that runs and strips only part of the value is still a disclosure.
+probe "config url through a redactor"  block "$API $GH1 -q '$CFG' | sed -E 's#x#y#'"
+# Capture is deliberately NOT a sink here, unlike rule 5: a captured value gets
+# printed back in pieces under a name rule 2 cannot see as secret-shaped.
+probe "config url captured"            block "u=${D}($API $GH1 -q '$CFG')"
+probe "stderr-only redirect"           block "$API $GH1 -q '$CFG' 2>/dev/null"
+# No .config named at all: the raw object carries the credential.
+probe "hooks endpoint, no selector"    block "$API $GH1"
+probe "hooks list, no selector"        block "$API repos/O/R/ho""oks"
+probe "hooks endpoint with a selector" allow "$API $GH1 -q '.id, .active'"
+probe "deliveries, status codes only"  allow "$API $GH1/deliveries -q '.[] | .status_code' | sort"
+# Rotation. The write RESPONSE echoes the object, so it needs silencing too.
+probe "literal value on a write"       block "$API --method PATCH $GH1 -f $CU=https://example.com/api/webhooks/1/AAAAAAAAAAAAAAAA"
+probe "write from a file, unsilenced"  block "$API --method PATCH $GH1 -f \"$CU=${D}(cat ${D}f)\""
+probe "write from a file, silenced"    allow "$API --method PATCH $GH1 -f \"$CU=${D}(cat ${D}f)\" > /dev/null"
+# An ordinary path containing "hooks" must not be caught.
+probe "git-hooks path not caught"      allow "$API repos/O/R/contents/scripts/git-hooks/operators.txt"
+probe "an unrelated api call"          allow "$API repos/O/R/pulls/416"
+
 echo
 # The summary carries the RAN count, so a short run cannot be read as success
 # by anything that greps only for failed=0. The exit status is authoritative
@@ -266,7 +298,7 @@ ran=$((pass + fail))
 # directly while the guard read EXPECTED, so updating only EXPECTED left the
 # summary printing a stale denominator. That is the same count-drift this
 # guard exists to catch, introduced by the commit that added the guard.
-EXPECTED=113
+EXPECTED=130
 printf '  passed=%s failed=%s ran=%s/%s\n' "$pass" "$fail" "$ran" "$EXPECTED"
 
 # COMPLETENESS GUARD. A case that never runs is not a case that passed, and
