@@ -741,4 +741,5 @@ CLAUDE.md is one command instead of a pasted paragraph:
   instructions to `AGENTS.md`, which Codex, Cursor, Copilot and others read, and
   makes `CLAUDE.md` a one-line `@AGENTS.md` import. The import matters: when a
   `CLAUDE.md` exists, Claude Code reads only that file by default and skips
-  `AGENTS.md`.
+  `AGENTS.md`. So in a folder that already has both files without the import,
+  the skill adds it and moves duplicated content out of `CLAUDE.md`.

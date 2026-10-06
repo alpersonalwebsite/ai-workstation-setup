@@ -26,21 +26,31 @@ repo root's only when you launch in that subfolder.
 ## CLAUDE.md or AGENTS.md
 
 `AGENTS.md` is the shared instructions file other coding agents read (Codex,
-Cursor, Copilot and more). Pick the file by what the folder already has:
+Cursor, Copilot and more). Below, "`CLAUDE.md`" means this folder's `CLAUDE.md`
+or `.claude/CLAUDE.md`, whichever exists: update that one, never add a second.
+Pick the file by what the folder already has:
 
 - **Neither file yet:** ask once, before drafting: will agents other than Claude
   work in this folder? **No:** write `CLAUDE.md`, as below. **Yes:** write the
   instructions to `AGENTS.md`, and make `CLAUDE.md` a single `@AGENTS.md` line,
   plus any notes that only apply to Claude, so every agent reads one source.
-- **`AGENTS.md` exists:** update `AGENTS.md`. If there is no `CLAUDE.md`, add the
-  one-line `@AGENTS.md` import rather than a second copy of the content.
-- **Only `CLAUDE.md` exists:** update it, and do not ask; offer `AGENTS.md` only
-  if the user says another agent is coming.
+- **Only `AGENTS.md`:** update it, and add a one-line `CLAUDE.md` containing
+  `@AGENTS.md` rather than a second copy of the content.
+- **Both, and `CLAUDE.md` already imports `@AGENTS.md`:** update `AGENTS.md`;
+  touch `CLAUDE.md` only for Claude-only notes.
+- **Both, and no import:** add the `@AGENTS.md` line to `CLAUDE.md`, and move any
+  content that appears in both out of `CLAUDE.md` so `AGENTS.md` is the one
+  source. Without this step, an update to `AGENTS.md` is never read by Claude.
+- **Only `CLAUDE.md`:** update it, and do not ask; offer `AGENTS.md` only if the
+  user says another agent is coming.
 
 The import is not optional when both files exist: with a `CLAUDE.md` present,
 Claude Code reads only `CLAUDE.md` by default and skips `AGENTS.md`, so a
 `CLAUDE.md` without `@AGENTS.md` silently hides the shared file from Claude. The
-import never loads it twice.
+import never loads it twice. A `CLAUDE.local.md` (personal, uncommitted) counts
+too: with one present Claude also skips `AGENTS.md` unless a `CLAUDE.md` imports
+it, so it is one more reason the import has to exist. Never write project
+instructions into `CLAUDE.local.md`.
 
 Everything below applies to whichever file holds the instructions.
 
