@@ -736,3 +736,9 @@ CLAUDE.md is one command instead of a pasted paragraph:
   the template from its code, this session, and relevant memory.
 - **Ongoing project:** run `/fill-claude-md` at the end of a session to fold in
   what changed. It builds up as you work.
+- **Shared with other coding agents:** in a folder with neither file, the skill
+  asks whether agents other than Claude will work there. If so it writes the
+  instructions to `AGENTS.md`, which Codex, Cursor, Copilot and others read, and
+  makes `CLAUDE.md` a one-line `@AGENTS.md` import. The import matters: when a
+  `CLAUDE.md` exists, Claude Code reads only that file by default and skips
+  `AGENTS.md`.

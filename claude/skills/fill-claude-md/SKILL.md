@@ -1,6 +1,6 @@
 ---
 name: fill-claude-md
-description: Fill or update the CLAUDE.md in the current folder from its code, this session, and relevant memory, folder-scoped. Manual only.
+description: Fill or update the CLAUDE.md in the current folder from its code, this session, and relevant memory, folder-scoped, or AGENTS.md plus a one-line CLAUDE.md import when other coding agents work there too. Manual only.
 disable-model-invocation: true
 allowed-tools: Read Grep Glob
 ---
@@ -22,6 +22,27 @@ relevant memory. You may pull context from parent or sibling folders where it
 helps explain this folder, but keep the file about this folder, not the whole
 repo. Claude Code loads CLAUDE.md by directory, so a subfolder file stacks on the
 repo root's only when you launch in that subfolder.
+
+## CLAUDE.md or AGENTS.md
+
+`AGENTS.md` is the shared instructions file other coding agents read (Codex,
+Cursor, Copilot and more). Pick the file by what the folder already has:
+
+- **Neither file yet:** ask once, before drafting: will agents other than Claude
+  work in this folder? **No:** write `CLAUDE.md`, as below. **Yes:** write the
+  instructions to `AGENTS.md`, and make `CLAUDE.md` a single `@AGENTS.md` line,
+  plus any notes that only apply to Claude, so every agent reads one source.
+- **`AGENTS.md` exists:** update `AGENTS.md`. If there is no `CLAUDE.md`, add the
+  one-line `@AGENTS.md` import rather than a second copy of the content.
+- **Only `CLAUDE.md` exists:** update it, and do not ask; offer `AGENTS.md` only
+  if the user says another agent is coming.
+
+The import is not optional when both files exist: with a `CLAUDE.md` present,
+Claude Code reads only `CLAUDE.md` by default and skips `AGENTS.md`, so a
+`CLAUDE.md` without `@AGENTS.md` silently hides the shared file from Claude. The
+import never loads it twice.
+
+Everything below applies to whichever file holds the instructions.
 
 ## Sources, in order of authority
 
