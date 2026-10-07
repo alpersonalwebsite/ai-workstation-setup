@@ -27,8 +27,14 @@ repo root's only when you launch in that subfolder.
 
 `AGENTS.md` is the shared instructions file other coding agents read (Codex,
 Cursor, Copilot and more). Below, "`CLAUDE.md`" means this folder's `CLAUDE.md`
-or `.claude/CLAUDE.md`, whichever exists: update that one, never add a second.
-Pick the file by what the folder already has:
+or `.claude/CLAUDE.md`, and "`AGENTS.md`" means its `AGENTS.md` or
+`.claude/AGENTS.md`, whichever exists: update that one, never add a second.
+"The import" (`@AGENTS.md` below) is the path from the `CLAUDE.md` file to the
+`AGENTS.md` file, because an `@` import resolves relative to the file that
+contains it, not the folder: `@AGENTS.md` from `./CLAUDE.md`, but
+`@../AGENTS.md` from `.claude/CLAUDE.md`. Written as a bare `@AGENTS.md` inside
+`.claude/CLAUDE.md`, it points at `.claude/AGENTS.md` and loads nothing when the
+file is at the root. Pick the file by what the folder already has:
 
 - **Neither file yet:** ask once, before drafting: will agents other than Claude
   work in this folder? **No:** write `CLAUDE.md`, as below. **Yes:** write the
