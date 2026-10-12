@@ -330,11 +330,14 @@ does not match what you asked for, or the manual-only flag described below.
   - [`writing-voice`](../claude/skills/writing-voice/) captures your writing
     voice across professional and personal registers so drafts sound like you.
     It ships as a template.
-  - [`fact-check`](../claude/skills/fact-check/) checks the technical claims in a
-    diff, file, commit, or PR against the toolchain before you ship them, so
-    unverified statements do not land in durable artifacts. Ready to use as-is:
-    manual only, and unable to use the Write or Edit tools (`disallowed-tools`),
-    though it can still run shell commands with your approval.
+  - [`fact-check`](../claude/skills/fact-check/) checks the claims in a diff,
+    file, commit, PR or report before you ship or act on them: numbers and data
+    against the logs, metrics or database they came from, and API, config or CLI
+    behavior against the real tool, read-only throughout, so unverified
+    statements do not land in durable artifacts. Ready to use as-is: manual only.
+    Its `disallowed-tools` removes the Write and Edit tools only until your next
+    message (the restriction clears then), and it can run shell commands with
+    your approval, so its own read-only rule is the real guard.
   - [`fill-claude-md`](../claude/skills/fill-claude-md/) fills or updates a
     folder-scoped `CLAUDE.md` from the folder's code, the session, and relevant
     memory, with guardrails (do not invent, verify counts and IDs, show the diff,

@@ -49,6 +49,8 @@ durable (a comment, commit, PR, report) first, and say which you skipped.
    test a claim. On production, prefer a read replica, a narrow time range and a
    `LIMIT`. Behavior that needs a side effect is tested only in a scratch copy,
    never against the real system, and never by pushing, deleting or messaging.
+   A scratch copy run by the real tool counts as the real system for step 7; a
+   mock or fixture standing in for the tool does not.
 5. Ask for counts and aggregates, not raw rows: it keeps the output small, and it
    keeps personal data, secrets and customer records out of the report. Quote a
    row only when the claim is about that row, with sensitive fields redacted.
