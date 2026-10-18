@@ -35,6 +35,9 @@ a personal message.
   rules in `CLAUDE.md`.
 - **Docs / README:** scannable. Headers, tables, short lists; show an example
   instead of describing one.
+- **Long-form technical / tutorial:** state the piece's scope and limits up
+  front, and point at the real source rather than standing in for it. [what
+  voice: mentor, or reference manual? address the reader as "you"?]
 
 ## Do
 
