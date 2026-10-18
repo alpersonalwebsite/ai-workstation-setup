@@ -41,8 +41,9 @@ Run a full security audit on the current project:
 
    Note `*.key*` also matches Keynote documents (`.key`) on macOS, and each
    pattern matches inside longer names too (`app.environment.ts`,
-   `mail.envelope.json`), so treat a hit as something to look at rather than a
-   finding on its own.
+   `mail.envelope.json`). So confirm what each hit is before filing it: a real
+   secret file (a committed `.env`, a private key) is a critical finding, while a
+   Keynote deck or a name that only contains a pattern is not a finding at all.
 
 5. Report findings grouped by severity (critical / warning / info) with
    specific remediation steps for each finding
