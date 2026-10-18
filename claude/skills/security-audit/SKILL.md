@@ -39,8 +39,10 @@ Run a full security audit on the current project:
    print an env file. It is a false positive (the pipe means `grep` reads stdin,
    not a file) but the effect is a skill that cannot run its own step.
 
-   Note `*.key*` also matches Keynote documents (`.key`, `.keynote`) on macOS, so
-   treat a `.key` hit as something to look at rather than a finding on its own.
+   Note `*.key*` also matches Keynote documents (`.key`) on macOS, and each
+   pattern matches inside longer names too (`app.environment.ts`,
+   `mail.envelope.json`), so treat a hit as something to look at rather than a
+   finding on its own.
 
 5. Report findings grouped by severity (critical / warning / info) with
    specific remediation steps for each finding
