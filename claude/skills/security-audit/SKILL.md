@@ -19,12 +19,15 @@ Run a full security audit on the current project:
    so a file committed before the pattern existed stays in the tree and in history:
 
    ```
-   git ls-files -- '*.env' '*.env.*' '*.envrc' '*.key' '*.pem' '*.secret' \
+   git ls-files -- '*.env*' '*.key*' '*.pem*' '*.secret*' \
      ':(exclude)*.example' ':(exclude)*.sample' ':(exclude)*.template'
    ```
 
-   `*.envrc` is listed separately because neither `*.env` nor `*.env.*` matches it,
-   and `.envrc` is the file step 1's `.env*` glob exists for. The three excludes
+   Each pattern matches its name anywhere in the path, the same set the older
+   `ls-files`-into-`grep` form matched: `server.key.bak`, `cert.pem.old`,
+   `app.keystore`, `.envrc`, `.secrets.json` and `config/db.secret.yml` are all
+   caught. Exact endings (`*.key`, `*.pem`) missed the first three and the last
+   two (found in review, 2026-10-18). The three excludes
    drop `.env.example`, `.env.sample` and `.env.template`, which are meant to be
    tracked; without them every project reports its own committed template as a
    finding.
@@ -36,8 +39,11 @@ Run a full security audit on the current project:
    print an env file. It is a false positive (the pipe means `grep` reads stdin,
    not a file) but the effect is a skill that cannot run its own step.
 
-   Note `*.key` also matches Keynote documents on macOS, so treat a `.key` hit as
-   something to look at rather than a finding on its own.
+   Note `*.key*` also matches Keynote documents (`.key`) on macOS, and each
+   pattern matches inside longer names too (`app.environment.ts`,
+   `mail.envelope.json`). So confirm what each hit is before filing it: a real
+   secret file (a committed `.env`, a private key) is a critical finding, while a
+   Keynote deck or a name that only contains a pattern is not a finding at all.
 
 5. Report findings grouped by severity (critical / warning / info) with
    specific remediation steps for each finding
