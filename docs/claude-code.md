@@ -265,17 +265,18 @@ does not match what you asked for, or the manual-only flag described below.
   [per-project `CLAUDE.md`](#a-claudemd-per-project) that `initclaude` scaffolds.
 - [`claude/statusline.sh`](../claude/statusline.sh) is a status-line script:
   Claude Code runs it every turn and it prints the launching command, model,
-  context-window use, session cost, and git branch, which renders as:
+  context-window use, session cost, working directory, and git branch, which
+  renders as:
   ```text
-  claude-extension  [Opus 5 (1M context)]  ctx 31%  $26.09  ⎇ main
+  claude-extension  [Opus 5 (1M context)]  ctx 31%  $26.09  ~/Documents/ai-workstation-setup  ⎇ main
   ```
   The first field is the command that started the session: `claude` for a plain
   run, or the name of a wrapper, see
   [A second Claude Code account, side by side](#a-second-claude-code-account-side-by-side).
-  Everything left of the branch is 60 characters at that model name, so the line
-  above is 64 and a **31-character branch is the first to exceed 90**: two of the
-  last ten branches merged in this repo would. The branch sits last, so the branch
-  is what a narrow pane cuts; drop a field from the script if you work in narrow
+  Everything left of the directory is 56 characters at that model name, and the
+  directory shows `$HOME` as `~`. The directory and branch sit last, so they are
+  what a narrow pane cuts: the line above is 98 characters, and its branch already
+  starts past column 90. Drop a field from the script if you work in narrow
   splits. Copy it to `~/.claude/statusline.sh`, `chmod +x`, and add
   the `statusLine` key to `settings.json` (see
   [Cost and usage visibility](#cost-and-usage-visibility)). jq only, no network.

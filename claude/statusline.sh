@@ -5,11 +5,12 @@
 # settings.json. Claude Code runs it every turn and pipes session JSON on stdin
 # (https://code.claude.com/docs/en/statusline). It prints, with no third-party
 # code and no outbound request:
-#     <launcher>  [<model>]  ctx <N>%  $<session-cost>   ⎇ <git-branch>
+#     <launcher>  [<model>]  ctx <N>%  $<session-cost>  <cwd>  ⎇ <git-branch>
 # Fields used:
 #   .model.display_name
 #   .context_window.used_percentage   (null early in a session / after /compact)
 #   .cost.total_cost_usd              (list-rate estimate, resets on /clear)
+#   .workspace.current_dir            (falls back to .cwd)
 # Only dependency is jq.
 
 input=$(cat)
@@ -18,10 +19,11 @@ input=$(cat)
 # (IFS=tab), then format cost in the shell. jq has no fixed-decimal float
 # formatting, so a raw number renders at a varying width ($0.5, $1, $0.56) on a
 # line that redraws every turn; printf %.2f keeps it steady.
-IFS=$'\t' read -r model pct cost <<<"$(printf '%s' "$input" | jq -r '
+IFS=$'\t' read -r model pct cost cwd <<<"$(printf '%s' "$input" | jq -r '
   [ (.model.display_name // "?"),
     ((.context_window.used_percentage // 0) | floor),
-    (.cost.total_cost_usd // 0)
+    (.cost.total_cost_usd // 0),
+    (.workspace.current_dir // .cwd // "")
   ] | @tsv')"
 
 # Which command started this session: plain `claude`, or a wrapper such as
@@ -62,6 +64,15 @@ if [ -z "$launcher" ]; then
 fi
 
 base=$(printf '%s  [%s]  ctx %s%%  $%.2f' "$launcher" "${model:-?}" "${pct:-0}" "${cost:-0}")
+
+# Working directory, with $HOME shown as ~. Matched on a path boundary so a
+# sibling such as /Users/al2 is not shortened as if it were under /Users/al.
+case $cwd in
+  '') ;;
+  "$HOME") base="$base  ~" ;;
+  "$HOME"/*) base="$base  ~${cwd#"$HOME"}" ;;
+  *) base="$base  $cwd" ;;
+esac
 
 # Git branch when the working directory is a repo (cheap, local).
 branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
