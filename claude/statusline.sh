@@ -22,13 +22,16 @@ input=$(cat)
 # The directory comes raw after the TSV line rather than as a TSV field: @tsv
 # escapes backslashes and tabs, and read -r does not undo that, so /tmp/a\b
 # would show as /tmp/a\\b. It is read with cat, not read, so a newline in the
-# path stays part of it and git -C below gets the real directory.
+# path stays part of it and git -C below gets the real directory. jq appends a
+# "." that is stripped afterwards, because command substitution drops trailing
+# newlines and would otherwise cut one off the end of the path.
 { IFS=$'\t' read -r model pct cost; cwd=$(cat); } <<<"$(printf '%s' "$input" | jq -r '
   ([ (.model.display_name // "?"),
      ((.context_window.used_percentage // 0) | floor),
      (.cost.total_cost_usd // 0)
    ] | @tsv),
-  (.workspace.current_dir // .cwd // "")')"
+  ((.workspace.current_dir // .cwd // "" | tostring) + ".")')"
+cwd=${cwd%.}
 
 # Which command started this session: plain `claude`, or a wrapper such as
 # claude-extension (the second-account launcher in config/claude-proj.zsh),
