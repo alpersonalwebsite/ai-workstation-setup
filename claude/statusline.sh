@@ -19,16 +19,16 @@ input=$(cat)
 # (IFS=tab), then format cost in the shell. jq has no fixed-decimal float
 # formatting, so a raw number renders at a varying width ($0.5, $1, $0.56) on a
 # line that redraws every turn; printf %.2f keeps it steady.
-# The directory comes on a second line rather than as a TSV field: @tsv escapes
-# backslashes and tabs, and read -r does not undo that, so /tmp/a\b would show
-# as /tmp/a\\b. Control characters become ? so a newline in a path cannot split
-# the line.
-{ IFS=$'\t' read -r model pct cost; IFS= read -r cwd; } <<<"$(printf '%s' "$input" | jq -r '
+# The directory comes raw after the TSV line rather than as a TSV field: @tsv
+# escapes backslashes and tabs, and read -r does not undo that, so /tmp/a\b
+# would show as /tmp/a\\b. It is read with cat, not read, so a newline in the
+# path stays part of it and git -C below gets the real directory.
+{ IFS=$'\t' read -r model pct cost; cwd=$(cat); } <<<"$(printf '%s' "$input" | jq -r '
   ([ (.model.display_name // "?"),
      ((.context_window.used_percentage // 0) | floor),
      (.cost.total_cost_usd // 0)
    ] | @tsv),
-  ((.workspace.current_dir // .cwd // "") | gsub("[[:cntrl:]]"; "?"))')"
+  (.workspace.current_dir // .cwd // "")')"
 
 # Which command started this session: plain `claude`, or a wrapper such as
 # claude-extension (the second-account launcher in config/claude-proj.zsh),
@@ -72,12 +72,14 @@ base=$(printf '%s  [%s]  ctx %s%%  $%.2f' "$launcher" "${model:-?}" "${pct:-0}" 
 # Working directory, with $HOME shown as ~. Matched on a path boundary so a
 # sibling such as /Users/al2 is not shortened as if it were under /Users/al.
 # An empty HOME turns "$HOME"/* into /*, which would put ~ on every path.
+# Control characters are shown as ? so a newline in a path cannot split the
+# bar; only the shown copy changes, cwd stays raw for the branch lookup.
 if [ -n "$cwd" ]; then
   shown=$cwd
   case $cwd in
     "$HOME"|"$HOME"/*) [ -n "$HOME" ] && shown="~${cwd#"$HOME"}" ;;
   esac
-  base="$base  $shown"
+  base="$base  ${shown//[[:cntrl:]]/?}"
 fi
 
 # Git branch of that same directory (cheap, local), so the branch always

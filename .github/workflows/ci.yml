@@ -122,7 +122,9 @@ jobs:
       # The directory field fails silently too: while it was being written, a
       # reused variable name blanked it and every launcher check above still
       # passed. So assert the whole line. It runs from an empty temp dir, and
-      # the paths do not exist, so no git branch is appended.
+      # the paths do not exist, so no git branch is appended, except for the
+      # last case: a real repo whose folder name holds a newline, which must
+      # keep its branch (the ? is for display only, git gets the raw path).
       - name: Assert the status line's directory field
         run: |
           set -euo pipefail
@@ -147,6 +149,11 @@ jobs:
           check "$base"                 /h '.'
           check "$base"'  /t/a\b'       /h '.workspace.current_dir="/t/a\\b"'
           check "$base  /t/a?b"         /h '.workspace.current_dir="/t/a\nb"'
+          # One empty commit: a repo with none reports HEAD, not its branch name.
+          git init -q -b probe "$PWD/"$'nl\nrepo'
+          git -C "$PWD/"$'nl\nrepo' -c user.name=ci -c user.email=ci@example.invalid \
+            -c commit.gpgsign=false commit -q --allow-empty -m probe
+          check "$base  $PWD/nl?repo  ⎇ probe" /h ".workspace.current_dir=\"$PWD/nl\\nrepo\""
 
       # The shipped default must stay 'off'. A public repo should not turn
       # every cloner's terminal scrollback into a plaintext file on disk.
