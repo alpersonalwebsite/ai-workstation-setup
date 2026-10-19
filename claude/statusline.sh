@@ -5,11 +5,12 @@
 # settings.json. Claude Code runs it every turn and pipes session JSON on stdin
 # (https://code.claude.com/docs/en/statusline). It prints, with no third-party
 # code and no outbound request:
-#     <launcher>  [<model>]  ctx <N>%  $<session-cost>   ⎇ <git-branch>
+#     <launcher>  [<model>]  ctx <N>%  $<session-cost>  <cwd>  ⎇ <git-branch>
 # Fields used:
 #   .model.display_name
 #   .context_window.used_percentage   (null early in a session / after /compact)
 #   .cost.total_cost_usd              (list-rate estimate, resets on /clear)
+#   .workspace.current_dir            (falls back to .cwd)
 # Only dependency is jq.
 
 input=$(cat)
@@ -18,11 +19,19 @@ input=$(cat)
 # (IFS=tab), then format cost in the shell. jq has no fixed-decimal float
 # formatting, so a raw number renders at a varying width ($0.5, $1, $0.56) on a
 # line that redraws every turn; printf %.2f keeps it steady.
-IFS=$'\t' read -r model pct cost <<<"$(printf '%s' "$input" | jq -r '
-  [ (.model.display_name // "?"),
-    ((.context_window.used_percentage // 0) | floor),
-    (.cost.total_cost_usd // 0)
-  ] | @tsv')"
+# The directory comes raw after the TSV line rather than as a TSV field: @tsv
+# escapes backslashes and tabs, and read -r does not undo that, so /tmp/a\b
+# would show as /tmp/a\\b. It is read with cat, not read, so a newline in the
+# path stays part of it and git -C below gets the real directory. jq appends a
+# "." that is stripped afterwards, because command substitution drops trailing
+# newlines and would otherwise cut one off the end of the path.
+{ IFS=$'\t' read -r model pct cost; cwd=$(cat); } <<<"$(printf '%s' "$input" | jq -r '
+  ([ (.model.display_name // "?"),
+     ((.context_window.used_percentage // 0) | floor),
+     (.cost.total_cost_usd // 0)
+   ] | @tsv),
+  ((.workspace.current_dir // .cwd // "" | tostring) + ".")')"
+cwd=${cwd%.}
 
 # Which command started this session: plain `claude`, or a wrapper such as
 # claude-extension (the second-account launcher in config/claude-proj.zsh),
@@ -63,8 +72,23 @@ fi
 
 base=$(printf '%s  [%s]  ctx %s%%  $%.2f' "$launcher" "${model:-?}" "${pct:-0}" "${cost:-0}")
 
-# Git branch when the working directory is a repo (cheap, local).
-branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+# Working directory, with $HOME shown as ~. Matched on a path boundary so a
+# sibling such as /Users/al2 is not shortened as if it were under /Users/al.
+# An empty HOME turns "$HOME"/* into /*, which would put ~ on every path.
+# Control characters are shown as ? so a newline in a path cannot split the
+# bar; only the shown copy changes, cwd stays raw for the branch lookup.
+if [ -n "$cwd" ]; then
+  shown=$cwd
+  case $cwd in
+    "$HOME"|"$HOME"/*) [ -n "$HOME" ] && shown="~${cwd#"$HOME"}" ;;
+  esac
+  base="$base  ${shown//[[:cntrl:]]/?}"
+fi
+
+# Git branch of that same directory (cheap, local), so the branch always
+# belongs to the path printed beside it. With no directory in the JSON, fall
+# back to the directory this script runs in.
+branch=$(git -C "${cwd:-.}" rev-parse --abbrev-ref HEAD 2>/dev/null)
 [ -n "$branch" ] && base="$base  ⎇ $branch"
 
 printf '%s\n' "$base"

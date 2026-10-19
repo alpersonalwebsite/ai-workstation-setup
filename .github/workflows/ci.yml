@@ -119,6 +119,47 @@ jobs:
           check claude           CLAUDE_LAUNCHER= CLAUDE_CONFIG_DIR="$HOME/.claude"
           check claude           CLAUDE_CONFIG_DIR=.
 
+      # The directory field fails silently too: while it was being written, a
+      # reused variable name blanked it and every launcher check above still
+      # passed. So assert the whole line. It runs from an empty temp dir, and
+      # the paths do not exist, so no git branch is appended, except for the
+      # last two cases: real repos whose folder names hold a newline, in the
+      # middle and at the end, which must keep their branch (the ? is for
+      # display only, git gets the raw path). The trailing one guards against
+      # command substitution, which drops trailing newlines.
+      - name: Assert the status line's directory field
+        run: |
+          set -euo pipefail
+          script="$PWD/claude/statusline.sh"
+          cd "$(mktemp -d)"
+          # shellcheck disable=SC2016  # a literal $, the cost the script prints
+          base='claude  [M]  ctx 1%  $0.00'
+          check() {  # $1 expected line, $2 HOME for the run, $3 jq filter setting the directory
+            json=$(jq -cn '{model:{display_name:"M"},context_window:{used_percentage:1},cost:{total_cost_usd:0}}' | jq -c "$3")
+            got=$(env -u CLAUDE_LAUNCHER -u CLAUDE_CONFIG_DIR HOME="$2" bash "$script" <<<"$json")
+            if [ "$got" != "$1" ]; then
+              echo "::error file=claude/statusline.sh::expected [$1], got [$got], for HOME=[$2] $3"
+              exit 1
+            fi
+            printf '  ok  %s\n' "$got"
+          }
+          check "$base  ~/p"            /h '.workspace.current_dir="/h/p"'
+          check "$base  ~"              /h '.workspace.current_dir="/h"'
+          check "$base  /h2/p"          /h '.workspace.current_dir="/h2/p"'
+          check "$base  /opt/x"         '' '.workspace.current_dir="/opt/x"'
+          check "$base  ~/p"            /h '.cwd="/h/p"'
+          check "$base"                 /h '.'
+          check "$base"'  /t/a\b'       /h '.workspace.current_dir="/t/a\\b"'
+          check "$base  /t/a?b"         /h '.workspace.current_dir="/t/a\nb"'
+          # One empty commit: a repo with none reports HEAD, not its branch name.
+          for name in $'nl\nrepo' $'trail\n'; do
+            git init -q -b probe "$PWD/$name"
+            git -C "$PWD/$name" -c user.name=ci -c user.email=ci@example.invalid \
+              -c commit.gpgsign=false commit -q --allow-empty -m probe
+          done
+          check "$base  $PWD/nl?repo  ⎇ probe" /h ".workspace.current_dir=\"$PWD/nl\\nrepo\""
+          check "$base  $PWD/trail?  ⎇ probe"  /h ".workspace.current_dir=\"$PWD/trail\\n\""
+
       # The shipped default must stay 'off'. A public repo should not turn
       # every cloner's terminal scrollback into a plaintext file on disk.
       - name: Assert pane-capture ships disabled
