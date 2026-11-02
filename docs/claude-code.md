@@ -312,7 +312,9 @@ does not match what you asked for, or the manual-only flag described below.
     `~/.claude/` itself (or `$CLAUDE_CONFIG_DIR` when set), since instructions
     and memory are a place secrets get pasted. Memory files under
     `projects/*/memory/` are scanned; transcripts and runtime dirs are not.
-    Warn-only by default; the script says which line to change to block.
+    On a hit it **exits 2**, which shows its stderr to Claude: a PostToolUse
+    hook's stderr on exit 0 reaches only the debug log, and the write has
+    already happened, so it reports rather than blocks.
   - `check-uncommitted.sh` (**Stop**) warns at session end when the working tree
     has uncommitted changes, naming the repo and counting modified versus
     untracked. Never blocks.

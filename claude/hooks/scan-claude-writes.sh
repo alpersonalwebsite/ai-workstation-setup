@@ -27,10 +27,15 @@ esac
 # Skip if file doesn't exist
 [[ ! -f "$FILE" ]] && exit 0
 
+# Exit 2 is how a PostToolUse hook gets a warning seen: Claude Code shows its
+# stderr to Claude, while the stderr of a hook that exits 0 reaches only the debug
+# log ("Claude never sees stderr from a hook that exits 0", code.claude.com/docs/en/hooks,
+# read 2026-11-02). Until then this hook printed and exited 0, so no warning was
+# ever seen. The write has already happened: PostToolUse cannot undo or block it.
 if command -v gitleaks &>/dev/null; then
-  if ! gitleaks detect --no-git --source "$FILE" 2>/dev/null; then
-    echo "WARNING: Potential secret in Claude config/memory file: $FILE" >&2
-    # change to exit 2 to block the write entirely
+  if ! gitleaks detect --no-git --redact --source "$FILE" >/dev/null 2>&1; then
+    echo "WARNING: gitleaks flagged a potential secret in Claude config/memory file $FILE. The write already happened. Tell the user the file and line, never the value, and ask before changing it." >&2
+    exit 2
   fi
 fi
 exit 0
