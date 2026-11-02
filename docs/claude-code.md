@@ -306,11 +306,20 @@ does not match what you asked for, or the manual-only flag described below.
     out of git. It strips comment lines first, so a comment mentioning `.env` does
     not satisfy the check for it.
   - `gitleaks-check.sh` (**PostToolUse** on Write and Edit) runs `gitleaks` on the
-    file just written and **exits 2 to block** on a hit. Skips `.md`, `.toml` and
-    lock files, where prose and pattern examples cause false positives.
+    file just written (following it if it is a symlink) and **exits 2** on a hit, which shows the finding (rule and
+    line, never the value) to Claude; the write has already happened, so it
+    reports rather than blocks. A gitleaks error is reported as a failed scan, not
+    a finding. Skips `.md`, `.toml` and lock files, where prose and pattern
+    examples cause false positives.
   - `scan-claude-writes.sh` (**PostToolUse**) scans files written inside
-    `~/.claude/` itself, since instructions and memory are a place secrets get
-    pasted. Warn-only by default; the script says which line to change to block.
+    `~/.claude/` itself (or `$CLAUDE_CONFIG_DIR` when set), since instructions
+    and memory are a place secrets get pasted. Memory files under
+    `projects/*/memory/` are scanned; transcripts and runtime dirs are not.
+    On a hit it **exits 2**, which shows its stderr to Claude: a PostToolUse
+    hook's stderr on exit 0 reaches only the debug log, and the write has
+    already happened, so it reports rather than blocks. The warning names each
+    rule and line, never the value, and a gitleaks error is reported as a
+    failed scan rather than a finding.
   - `check-uncommitted.sh` (**Stop**) warns at session end when the working tree
     has uncommitted changes, naming the repo and counting modified versus
     untracked. Never blocks.
@@ -319,10 +328,12 @@ does not match what you asked for, or the manual-only flag described below.
   `block-secret-echo.sh` parses it with **`python3`** and, unlike the others,
   **fails closed** if its interpreter is missing (it denies the tool call rather
   than no-opping, since a secret guard that silently passes is worse than none).
-  The two scanners need **`gitleaks`** and are guarded with `command -v`, so they
-  no-op silently if it is absent. Exit code 2 is the blocking one:
-  `gitleaks-check.sh` uses it on a real finding, and `block-secret-echo.sh` uses
-  it to refuse a disclosing command.
+  The two scanners need **`gitleaks`** 8.16.2 or later (an older one fails every
+  scan, loudly) and are guarded with `command -v`, so they no-op silently if it
+  is absent. Exit code 2 means a different thing per event:
+  `block-secret-echo.sh` (PreToolUse) uses it to refuse a disclosing command
+  before it runs, while the two scanners (PostToolUse) use it to show a finding
+  to Claude after the write, which they cannot undo.
 - [`claude/skills/`](../claude/skills/) holds one folder per skill. Each is a
   `SKILL.md` that Claude invokes when a task matches its description, unless it
   opts out with `disable-model-invocation: true`. That opt-out is what **manual
