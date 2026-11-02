@@ -32,10 +32,25 @@ esac
 # log ("Claude never sees stderr from a hook that exits 0", code.claude.com/docs/en/hooks,
 # read 2026-11-02). Until then this hook printed and exited 0, so no warning was
 # ever seen. The write has already happened: PostToolUse cannot undo or block it.
+#
+# --exit-code 3 keeps a finding apart from gitleaks' own errors, which exit 1
+# (measured 2026-11-02: a clean file with GITLEAKS_CONFIG pointing at a missing
+# file exited 1, which this hook used to report as a secret). An error is reported
+# as a failed scan, not as a finding. Findings are read from gitleaks' verbose
+# output, which goes to stderr with the secret replaced by REDACTED; only the
+# RuleID and Line fields are kept from it.
 if command -v gitleaks &>/dev/null; then
-  if ! gitleaks detect --no-git --redact --source "$FILE" >/dev/null 2>&1; then
-    echo "WARNING: gitleaks flagged a potential secret in Claude config/memory file $FILE. The write already happened. Tell the user the file and line, never the value, and ask before changing it." >&2
-    exit 2
+  if OUT=$(gitleaks detect --no-git --redact -v --no-banner --no-color --exit-code 3 --source "$FILE" 2>&1); then
+    exit 0
+  else
+    RC=$?
   fi
+  if [[ $RC -eq 3 ]]; then
+    WHERE=$(printf '%s\n' "$OUT" | awk '$1 == "RuleID:" {r = $2} $1 == "Line:" {printf "%s%s at line %s", sep, r, $2; sep = ", "}')
+    echo "WARNING: gitleaks flagged a potential secret in Claude config/memory file $FILE (${WHERE:-rule and line not reported}). The write already happened. Tell the user the file and line, never the value, and ask before changing it." >&2
+  else
+    echo "WARNING: gitleaks failed (exit $RC) on Claude config/memory file $FILE, so it was not scanned for secrets." >&2
+  fi
+  exit 2
 fi
 exit 0

@@ -314,7 +314,9 @@ does not match what you asked for, or the manual-only flag described below.
     `projects/*/memory/` are scanned; transcripts and runtime dirs are not.
     On a hit it **exits 2**, which shows its stderr to Claude: a PostToolUse
     hook's stderr on exit 0 reaches only the debug log, and the write has
-    already happened, so it reports rather than blocks.
+    already happened, so it reports rather than blocks. The warning names each
+    rule and line, never the value, and a gitleaks error is reported as a
+    failed scan rather than a finding.
   - `check-uncommitted.sh` (**Stop**) warns at session end when the working tree
     has uncommitted changes, naming the repo and counting modified versus
     untracked. Never blocks.
