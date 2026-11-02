@@ -306,9 +306,11 @@ does not match what you asked for, or the manual-only flag described below.
     out of git. It strips comment lines first, so a comment mentioning `.env` does
     not satisfy the check for it.
   - `gitleaks-check.sh` (**PostToolUse** on Write and Edit) runs `gitleaks` on the
-    file just written and **exits 2** on a hit, which shows the finding to Claude;
-    the write has already happened, so it reports rather than blocks. Skips `.md`,
-    `.toml` and lock files, where prose and pattern examples cause false positives.
+    file just written and **exits 2** on a hit, which shows the finding (rule and
+    line, never the value) to Claude; the write has already happened, so it
+    reports rather than blocks. A gitleaks error is reported as a failed scan, not
+    a finding. Skips `.md`, `.toml` and lock files, where prose and pattern
+    examples cause false positives.
   - `scan-claude-writes.sh` (**PostToolUse**) scans files written inside
     `~/.claude/` itself (or `$CLAUDE_CONFIG_DIR` when set), since instructions
     and memory are a place secrets get pasted. Memory files under
@@ -327,9 +329,10 @@ does not match what you asked for, or the manual-only flag described below.
   **fails closed** if its interpreter is missing (it denies the tool call rather
   than no-opping, since a secret guard that silently passes is worse than none).
   The two scanners need **`gitleaks`** and are guarded with `command -v`, so they
-  no-op silently if it is absent. Exit code 2 is the blocking one:
-  `gitleaks-check.sh` uses it on a real finding, and `block-secret-echo.sh` uses
-  it to refuse a disclosing command.
+  no-op silently if it is absent. Exit code 2 means a different thing per event:
+  `block-secret-echo.sh` (PreToolUse) uses it to refuse a disclosing command
+  before it runs, while the two scanners (PostToolUse) use it to show a finding
+  to Claude after the write, which they cannot undo.
 - [`claude/skills/`](../claude/skills/) holds one folder per skill. Each is a
   `SKILL.md` that Claude invokes when a task matches its description, unless it
   opts out with `disable-model-invocation: true`. That opt-out is what **manual
