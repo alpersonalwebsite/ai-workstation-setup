@@ -328,8 +328,9 @@ does not match what you asked for, or the manual-only flag described below.
   `block-secret-echo.sh` parses it with **`python3`** and, unlike the others,
   **fails closed** if its interpreter is missing (it denies the tool call rather
   than no-opping, since a secret guard that silently passes is worse than none).
-  The two scanners need **`gitleaks`** and are guarded with `command -v`, so they
-  no-op silently if it is absent. Exit code 2 means a different thing per event:
+  The two scanners need **`gitleaks`** 8.16.2 or later (an older one fails every
+  scan, loudly) and are guarded with `command -v`, so they no-op silently if it
+  is absent. Exit code 2 means a different thing per event:
   `block-secret-echo.sh` (PreToolUse) uses it to refuse a disclosing command
   before it runs, while the two scanners (PostToolUse) use it to show a finding
   to Claude after the write, which they cannot undo.

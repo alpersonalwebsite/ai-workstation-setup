@@ -37,8 +37,10 @@ esac
 # (measured 2026-11-02: a clean file with GITLEAKS_CONFIG pointing at a missing
 # file exited 1, which this hook used to report as a secret). An error is reported
 # as a failed scan, not as a finding. Findings are read from gitleaks' verbose
-# output, which goes to stderr with the secret replaced by REDACTED; only the
-# RuleID and Line fields are kept from it.
+# output, which goes to stdout (stderr carries only log lines) with the secret
+# replaced by REDACTED; both are captured, and only the RuleID and Line fields
+# are kept. Needs gitleaks 8.16.2 or later for --no-color (--no-banner arrived
+# in 8.13.0); an older one fails every scan, loudly.
 if command -v gitleaks &>/dev/null; then
   if OUT=$(gitleaks detect --no-git --redact -v --no-banner --no-color --exit-code 3 --source "$FILE" 2>&1); then
     exit 0
