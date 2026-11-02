@@ -306,7 +306,7 @@ does not match what you asked for, or the manual-only flag described below.
     out of git. It strips comment lines first, so a comment mentioning `.env` does
     not satisfy the check for it.
   - `gitleaks-check.sh` (**PostToolUse** on Write and Edit) runs `gitleaks` on the
-    file just written and **exits 2** on a hit, which shows the finding (rule and
+    file just written (following it if it is a symlink) and **exits 2** on a hit, which shows the finding (rule and
     line, never the value) to Claude; the write has already happened, so it
     reports rather than blocks. A gitleaks error is reported as a failed scan, not
     a finding. Skips `.md`, `.toml` and lock files, where prose and pattern

@@ -23,8 +23,12 @@ FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 # with the secret replaced by REDACTED; both are captured, and only the RuleID
 # and Line fields are kept. Needs gitleaks 8.16.2 or later for --no-color
 # (--no-banner arrived in 8.13.0); an older one fails every scan, loudly.
+# --follow-symlinks: without it gitleaks skips a file that is itself a symlink
+# and exits 0, so the write read as clean unscanned (measured 2026-11-02 with
+# 8.27.2: rc 0 without, rc 3 with). Config files here are often symlinks, such
+# as a stowed CLAUDE.md or settings.json. The flag is on detect since 8.15.0.
 if command -v gitleaks &>/dev/null; then
-  if OUT=$(gitleaks detect --no-git --redact -v --no-banner --no-color --exit-code 3 --source "$FILE" 2>&1); then
+  if OUT=$(gitleaks detect --no-git --follow-symlinks --redact -v --no-banner --no-color --exit-code 3 --source "$FILE" 2>&1); then
     exit 0
   else
     RC=$?
