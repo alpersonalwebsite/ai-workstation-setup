@@ -27,6 +27,10 @@ FILE=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 # and exits 0, so the write read as clean unscanned (measured 2026-11-02 with
 # 8.27.2: rc 0 without, rc 3 with). Config files here are often symlinks, such
 # as a stowed CLAUDE.md or settings.json. The flag is on detect since 8.15.0.
+# Deliberate fail-open: with no gitleaks installed the hook exits 0 and the
+# write goes unscanned, with no warning. A warning here would fire on every
+# write on a machine without gitleaks; the setup docs list gitleaks as a
+# requirement instead. Reviewed and kept 2026-11-02.
 if command -v gitleaks &>/dev/null; then
   if OUT=$(gitleaks detect --no-git --follow-symlinks --redact -v --no-banner --no-color --exit-code 3 --source "$FILE" 2>&1); then
     exit 0
