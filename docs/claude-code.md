@@ -306,8 +306,9 @@ does not match what you asked for, or the manual-only flag described below.
     out of git. It strips comment lines first, so a comment mentioning `.env` does
     not satisfy the check for it.
   - `gitleaks-check.sh` (**PostToolUse** on Write and Edit) runs `gitleaks` on the
-    file just written and **exits 2 to block** on a hit. Skips `.md`, `.toml` and
-    lock files, where prose and pattern examples cause false positives.
+    file just written and **exits 2** on a hit, which shows the finding to Claude;
+    the write has already happened, so it reports rather than blocks. Skips `.md`,
+    `.toml` and lock files, where prose and pattern examples cause false positives.
   - `scan-claude-writes.sh` (**PostToolUse**) scans files written inside
     `~/.claude/` itself (or `$CLAUDE_CONFIG_DIR` when set), since instructions
     and memory are a place secrets get pasted. Memory files under
