@@ -54,6 +54,10 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/validate-gitignore.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/check-gitleaks.sh"
           }
         ]
       }
