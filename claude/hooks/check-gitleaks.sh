@@ -1,11 +1,13 @@
 #!/bin/bash
-# SessionStart: say once, at the start of a session, that gitleaks is missing.
+# SessionStart: say at the start of each session that gitleaks is missing.
 #
 # gitleaks-check.sh and scan-claude-writes.sh fail open without gitleaks: every
 # write goes unscanned with no warning, deliberately, since a warning there would
 # fire on every write. This hook is the one place that says so. It prints nothing
 # when gitleaks is installed, and always exits 0: SessionStart cannot block, and a
-# missing scanner is a reason to warn, not to stop the session.
+# missing scanner is a reason to warn, not to stop the session. It repeats on a
+# resume, since SessionStart fires there too (measured 2026-11-04: source
+# "startup", then "resume", with the matcher empty).
 #
 # THIS FILE SHIPS UNCHANGED to the ai-workstation-setup template, so what differs
 # between machines is decided here at run time rather than by keeping two copies:
@@ -28,6 +30,13 @@ command -v gitleaks >/dev/null 2>&1 && exit 0
 hooks_dir=
 if command -v git >/dev/null 2>&1; then
   hooks_dir=$(git config --global --type=path core.hooksPath 2>/dev/null)
+  # git resolves a relative core.hooksPath against the repo root, not the cwd
+  # (measured 2026-11-04, git 2.39.5: a commit from a subfolder ran the root's
+  # .githooks/pre-commit), so resolve it there too. Against the cwd, a session
+  # started in a subfolder missed the fallback.
+  if [[ -n "$hooks_dir" && "$hooks_dir" != /* ]]; then
+    top=$(git rev-parse --show-toplevel 2>/dev/null) && hooks_dir="$top/$hooks_dir"
+  fi
 fi
 [[ -n "$hooks_dir" ]] || hooks_dir="$HOME/.git-hooks"
 

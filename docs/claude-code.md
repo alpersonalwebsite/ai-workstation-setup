@@ -289,7 +289,7 @@ does not match what you asked for, or the manual-only flag described below.
   It deliberately sets **no `permissions.allow`**, since a permission grant
   shipped without its reasoning is worse than no grant; see
   [Security notes](ai-workstation.md#security-notes) before adding any.
-- [`claude/hooks/`](../claude/hooks/) holds five hook scripts. Hooks are where
+- [`claude/hooks/`](../claude/hooks/) holds six hook scripts. Hooks are where
   security posture stops being advice and starts being enforcement, since they run
   whether or not Claude decides to cooperate. Copy them to `~/.claude/hooks/`,
   `chmod +x`, and wire them with the settings file above.
@@ -323,9 +323,9 @@ does not match what you asked for, or the manual-only flag described below.
   - `check-uncommitted.sh` (**Stop**) warns at session end when the working tree
     has uncommitted changes, naming the repo and counting modified versus
     untracked. Never blocks.
-  - `check-gitleaks.sh` (**SessionStart**) says once, at session start, that
-    `gitleaks` is missing and the two scanners above are therefore skipping
-    every write, with the install command. It prints nothing when gitleaks is
+  - `check-gitleaks.sh` (**SessionStart**) says at the start of each session
+    (a resumed one included) that `gitleaks` is missing and the two scanners
+    above are therefore skipping every write, with the install command. It prints nothing when gitleaks is
     installed and never blocks. If a global git `pre-commit` hook with a
     `SECRET_PATTERN=` fallback scan is present, it adds that commits get only
     that scan; this repo ships no git hooks, so here it names only the
