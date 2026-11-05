@@ -327,8 +327,8 @@ does not match what you asked for, or the manual-only flag described below.
     (a resumed one included) that `gitleaks` is missing and the two scanners
     above are therefore skipping every write, with the install command. It prints nothing when gitleaks is
     installed and never blocks. If a global git `pre-commit` hook with a
-    `SECRET_PATTERN=` fallback scan is present, it adds that commits get only
-    that scan; this repo ships no git hooks, so here it names only the
+    `SECRET_PATTERN=` fallback scan is present, it adds that where that hook
+    runs, commits get only its scan; this repo ships no git hooks, so here it names only the
     write-time scans. Without `jq` it prints the same line as plain text.
 
   All six receive their event JSON on stdin; `check-gitleaks.sh` discards it.

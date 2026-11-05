@@ -42,7 +42,9 @@ fi
 
 msg="gitleaks is not installed, so Claude Code's write-time secret scans (gitleaks-check.sh, scan-claude-writes.sh) are skipped on this machine"
 if [[ -f "$hooks_dir/pre-commit" ]] && grep -q '^SECRET_PATTERN=' "$hooks_dir/pre-commit" 2>/dev/null; then
-  msg="$msg, and commits get only the pre-commit fallback pattern scan"
+  # "where it runs": a repo with its own core.hooksPath skips the global hook
+  # (check-git-hooks.sh warns about that), so this cannot promise the scan runs.
+  msg="$msg, and where the global pre-commit hook runs, commits get only its fallback pattern scan"
 fi
 if command -v brew >/dev/null 2>&1; then
   msg="$msg. Fix: brew install gitleaks"
