@@ -82,7 +82,7 @@ Either way, [Claude Code config and skills](docs/claude-code.md#claude-code-conf
 | tmux plugins (sensible, yank, resurrect, continuum) | `github.com/tmux-plugins/*` via TPM | **No**, TPM pulls each default branch |
 | tmux, fzf, and the `--apps` casks | Homebrew formulae and casks | No, current versions |
 
-The two unpinned cases:
+The three unpinned cases:
 
 - **The Homebrew installer** is piped from a remote URL into `bash` and runs as you.
   That is Homebrew's own documented install method, but it is still remote code running with your privileges, and `HEAD` means its contents can change between runs.
@@ -92,6 +92,8 @@ The two unpinned cases:
   All four come from the [tmux-plugins](https://github.com/tmux-plugins) org and, in the revisions I reviewed, run locally and make no network calls of their own.
   That is an observation about those revisions, not a guarantee: the branches are mutable, so what you install may not be what I reviewed.
   To pin them, clone each plugin yourself at a chosen tag into `~/.tmux/plugins/` and drop the `set -g @plugin` lines from `tmux.conf`.
+- **The Homebrew formulae and casks** (tmux, fzf, and the `--apps` apps) are installed with a plain `brew install` and no version, so you get whatever Homebrew currently ships.
+  That is ordinary Homebrew behavior, but it means two runs months apart can install different versions.
 
 To bump the TPM pin, change `TPM_VERSION` and `TPM_COMMIT` in `setup.sh` together.
 CI fails if they disagree with the upstream tag.
@@ -117,7 +119,7 @@ Both `~/.tmux.conf` and `~/.claude-proj.zsh` are copied to a timestamped `.backu
 | [`docs/terminal.md`](docs/terminal.md) | tmux with session restore, fzf, `proj` and `initclaude`, the project workflow, surviving a reboot |
 | [`docs/claude-code.md`](docs/claude-code.md) | Claude Code config, skills, hooks, status line, Stow, cost visibility, two accounts side by side |
 | [`docs/workspace.md`](docs/workspace.md) | Window management, monitor arrangement, lighting, brightness, dark mode |
-| [`setup.sh`](setup.sh) | Idempotent installer for the terminal side |
+| [`setup.sh`](setup.sh) | Idempotent installer for the terminal side, plus the window and display apps with `--apps` |
 | [`config/tmux.conf`](config/tmux.conf) | tmux configuration (persistent sessions, big scrollback) |
 | [`config/claude-proj.zsh`](config/claude-proj.zsh) | The `proj` and `initclaude` shell functions |
 | [`claude/CLAUDE.example.md`](claude/CLAUDE.example.md) | Template global instructions; copy to `~/.claude/CLAUDE.md` |
