@@ -82,7 +82,7 @@ Both live in [`../config/claude-proj.zsh`](../config/claude-proj.zsh), which
 - **What it's for:** Scaffolds a `CLAUDE.md` memory file in the current folder,
   pre-filled with the sections worth keeping (what this is, stack, key decisions
   and why, current state, TODO, gotchas).
-- **Replaces/changes:** Nothing new, it is just a template. The value is that
+- **Replaces/changes:** Nothing new, it is a template. The value is that
   the template asks the right questions.
 
 ### Project workflow
@@ -97,7 +97,7 @@ instead of spawning duplicates, no hand-naming, no `tmux attach -t <name>`.
 mkdir my-project && cd my-project
 initclaude          # optional: scaffold CLAUDE.md (project memory)
 proj .              # create/attach this folder's tmux session
-claude              # start Claude inside it — now persistent
+claude              # start Claude inside it (persistent now)
 ```
 
 **Existing project (no `CLAUDE.md` yet):**
@@ -166,7 +166,7 @@ almost everything comes back:
 | Claude conversations | Saved to disk; reload with `claude --resume` |
 | tmux sessions (windows, panes, dirs) | Restored headlessly by continuum; panes come back as **plain shells** |
 | Rectangle column/row shortcuts | Kept (they live in Rectangle's prefs) |
-| Which window sat in which column | **Not** restored on its own — re-snap, or use an iTerm2 arrangement |
+| Which window sat in which column | **Not** restored on its own: re-snap, or use an iTerm2 arrangement |
 | iTerm2 opening at all | Only if iTerm2 is a Login Item (below) |
 
 **Two auto-start pieces, in two different places.** Both live in **System
@@ -195,7 +195,7 @@ window arrangement:
 
 **After a reboot, three steps per project:**
 
-1. iTerm2 launches (Login Items) and its arrangement reopens your windows — but
+1. iTerm2 launches (Login Items) and its arrangement reopens your windows, but
    as **plain shells**, not attached to tmux.
 2. In each window, run **`proj`**. It reattaches to the session continuum
    restored in the background (same deterministic name), dropping you back into

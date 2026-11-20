@@ -141,7 +141,7 @@ resumable, which is the point of everything below.
   project is set up, and under these rules it is refused, as is any redirect that
   writes the file, `git show … > .env` included. There is no route through: unlike
   the read side, `git show` does not help, because the refusal is on the write.
-  **So create and edit your `.env` outside Claude** — and the same goes for
+  **So create and edit your `.env` outside Claude**, and the same goes for
   `.envrc`, which is the case you are more likely to hit, since a direnv file gets
   edited as work proceeds rather than once at setup. If that trade is wrong for
   you, the narrower rule is to drop the `*` and deny `//**/.env` plus the specific
