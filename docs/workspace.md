@@ -68,7 +68,7 @@ regardless.
 
 #### Rows and grids
 
-Rows work exactly like columns, you just vary `Y`/`H` instead of `X`/`W`. For a
+Rows work exactly like columns: you vary `Y`/`H` instead of `X`/`W`. For a
 quick two-stack, the built-in halves are enough: `Ctrl-Opt-Up` (top half) and
 `Ctrl-Opt-Down` (bottom half). For anything else, use Custom Size and Position.
 
@@ -195,7 +195,7 @@ lights fix both.
 Clamps on the top edge, centered (the weighted clip sits fine on the flat middle
 of a curved ultrawide). It has two independent lights plus an ambient sensor.
 
-**Front (task) light** — lights the keyboard/desk, not the screen:
+**Front (task) light:** lights the keyboard/desk, not the screen:
 
 | Setting | Value |
 |---|---|
@@ -207,7 +207,7 @@ of a curved ultrawide). It has two independent lights plus an ambient sensor.
 Save a favorite: dial the light to the look you want, **long-press the favorite
 button (~3s)** until the bar blinks, then single-press it to recall.
 
-**Rear "Halo" (bias) light** — soft glow behind the monitor, ON but low
+**Rear "Halo" (bias) light:** soft glow behind the monitor, ON but low
 (~10–20%), color temp matched to the Govee so the whole back-of-monitor zone
 reads as one tone.
 
