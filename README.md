@@ -17,8 +17,8 @@ That moves the effort from typing code to writing precise intent and keeping con
 
 - **macOS only.** The scripts assume Homebrew and zsh.
 - **A personal collection, not a framework.** Take what helps and skip the rest.
-- **`setup.sh` installs the terminal side only.** Nothing under [`claude/`](claude/) is installed for you; [placing those files](#getting-the-claude-files-into-place) is a separate, manual step.
-- **Two downloads are unpinned:** the Homebrew installer and the tmux plugins. [What this fetches](#what-this-fetches) has the details.
+- **`setup.sh` does not install the Claude Code config.** It sets up the terminal side, plus the window and display apps with `--apps`. Nothing under [`claude/`](claude/) is installed for you; [placing those files](#getting-the-claude-files-into-place) is a separate, manual step.
+- **Only TPM is pinned.** The Homebrew installer, the tmux plugins, and the Homebrew formulae and casks are all fetched at whatever is current. [What this fetches](#what-this-fetches) has the details.
 - **The SDD artifacts themselves are not written up yet:** the prompt and spec templates, a reviewer setup using `git worktree` (one working directory per branch), and a walkthrough of a feature from spec to merged PR.
 
 ## Prerequisites
